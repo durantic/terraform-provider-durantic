@@ -23,7 +23,10 @@ import (
 )
 
 const (
-	defaultAPIEndpoint = "https://api.stage.durantic.dev"
+	defaultAPIEndpoint        = "https://api.stage.durantic.dev"
+	endpointEnvName           = "DURANTIC_ENDPOINT"
+	apiTokenEnvName           = "DURANTIC_API_TOKEN"
+	insecureSkipVerifyEnvName = "DURANTIC_INSECURE_SKIP_VERIFY"
 )
 
 // Ensure DuranticProvider satisfies various provider interfaces.
@@ -80,45 +83,37 @@ func (p *DuranticProvider) Configure(ctx context.Context, req provider.Configure
 		return
 	}
 
-	// Read endpoint from config, fallback to env var, or use default
-	endpoint := defaultAPIEndpoint
-	if !data.Endpoint.IsNull() && data.Endpoint.ValueString() != "" {
-		endpoint = data.Endpoint.ValueString()
-	} else if v := os.Getenv("DURANTIC_ENDPOINT"); v != "" {
-		endpoint = v
+	// Read endpoint from env var, config, or use default
+	endpoint := stringCoalesce(os.Getenv(endpointEnvName), data.Endpoint.ValueString())
+	if endpoint == "" {
+		endpoint = defaultAPIEndpoint
 	}
 
-	// Read API token from config or env var
-	apiToken := ""
-	if !data.ApiToken.IsNull() && data.ApiToken.ValueString() != "" {
-		apiToken = data.ApiToken.ValueString()
-	} else if v := os.Getenv("DURANTIC_API_TOKEN"); v != "" {
-		apiToken = v
-	}
+	// Read API token from env var or config
+	apiToken := stringCoalesce(os.Getenv(apiTokenEnvName), data.ApiToken.ValueString())
 
 	// Validate that API token is provided
 	if apiToken == "" {
 		resp.Diagnostics.AddError(
 			"Missing API Token",
-			"API token is required. Set it via the api_token provider attribute or the DURANTIC_API_TOKEN environment variable.",
+			fmt.Sprintf("API token is required. Set it via the api_token provider attribute or the %s environment variable.", apiTokenEnvName),
 		)
 		return
 	}
 
 	// Read insecure_skip_verify from config or env var
-	insecureSkipVerify := false
-	if !data.InsecureSkipVerify.IsNull() {
-		insecureSkipVerify = data.InsecureSkipVerify.ValueBool()
-	} else if v := os.Getenv("DURANTIC_INSECURE_SKIP_VERIFY"); v != "" {
-		var err error
-		insecureSkipVerify, err = strconv.ParseBool(v)
+	insecureSkipVerify := data.InsecureSkipVerify.ValueBool()
+
+	if v := os.Getenv(insecureSkipVerifyEnvName); v != "" {
+		b, err := strconv.ParseBool(v)
 		if err != nil {
 			resp.Diagnostics.AddError(
-				"Invalid DURANTIC_INSECURE_SKIP_VERIFY Value",
-				fmt.Sprintf("Could not parse DURANTIC_INSECURE_SKIP_VERIFY as boolean: %s", err),
+				fmt.Sprintf("Invalid %s Value", insecureSkipVerifyEnvName),
+				fmt.Sprintf("Could not parse %s as boolean: %s", insecureSkipVerifyEnvName, err),
 			)
 			return
 		}
+		insecureSkipVerify = b
 	}
 
 	// Parse endpoint URL to extract scheme and host
@@ -192,4 +187,14 @@ func New(version string) func() provider.Provider {
 			version: version,
 		}
 	}
+}
+
+// stringCoalesce returns the first non-empty string from the provided values or an empty string if all are empty.
+func stringCoalesce(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
