@@ -5,8 +5,11 @@ package provider
 
 import (
 	"context"
-	"net/http"
+	"fmt"
+	"net/url"
+	"os"
 
+	durantic "github.com/durantic/controlplane-client-go/durantic"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/function"
@@ -16,42 +19,48 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// Ensure ScaffoldingProvider satisfies various provider interfaces.
-var _ provider.Provider = &ScaffoldingProvider{}
-var _ provider.ProviderWithFunctions = &ScaffoldingProvider{}
-var _ provider.ProviderWithEphemeralResources = &ScaffoldingProvider{}
+// Ensure DuranticProvider satisfies various provider interfaces.
+var _ provider.Provider = &DuranticProvider{}
+var _ provider.ProviderWithFunctions = &DuranticProvider{}
+var _ provider.ProviderWithEphemeralResources = &DuranticProvider{}
 
-// ScaffoldingProvider defines the provider implementation.
-type ScaffoldingProvider struct {
+// DuranticProvider defines the provider implementation.
+type DuranticProvider struct {
 	// version is set to the provider version on release, "dev" when the
 	// provider is built and ran locally, and "test" when running acceptance
 	// testing.
 	version string
 }
 
-// ScaffoldingProviderModel describes the provider data model.
-type ScaffoldingProviderModel struct {
+// DuranticProviderModel describes the provider data model.
+type DuranticProviderModel struct {
 	Endpoint types.String `tfsdk:"endpoint"`
+	ApiToken types.String `tfsdk:"api_token"`
 }
 
-func (p *ScaffoldingProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "scaffolding"
+func (p *DuranticProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
+	resp.TypeName = "durantic"
 	resp.Version = p.version
 }
 
-func (p *ScaffoldingProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
+func (p *DuranticProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "Example provider attribute",
+				MarkdownDescription: "Durantic API endpoint URL. Can also be set via DURANTIC_ENDPOINT environment variable. Defaults to https://api.durantic.io",
 				Optional:            true,
+			},
+			"api_token": schema.StringAttribute{
+				MarkdownDescription: "API token for Durantic authentication. Can also be set via DURANTIC_API_TOKEN environment variable.",
+				Optional:            true,
+				Sensitive:           true,
 			},
 		},
 	}
 }
 
-func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	var data ScaffoldingProviderModel
+func (p *DuranticProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	var data DuranticProviderModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
@@ -59,34 +68,76 @@ func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.Config
 		return
 	}
 
-	// Configuration values are now available.
-	// if data.Endpoint.IsNull() { /* ... */ }
+	// Read endpoint from config, fallback to env var, or use default
+	endpoint := "https://api.durantic.io"
+	if !data.Endpoint.IsNull() && data.Endpoint.ValueString() != "" {
+		endpoint = data.Endpoint.ValueString()
+	} else if v := os.Getenv("DURANTIC_ENDPOINT"); v != "" {
+		endpoint = v
+	}
 
-	// Example client configuration for data sources and resources
-	client := http.DefaultClient
+	// Read API token from config or env var
+	apiToken := ""
+	if !data.ApiToken.IsNull() && data.ApiToken.ValueString() != "" {
+		apiToken = data.ApiToken.ValueString()
+	} else if v := os.Getenv("DURANTIC_API_TOKEN"); v != "" {
+		apiToken = v
+	}
+
+	// Validate that API token is provided
+	if apiToken == "" {
+		resp.Diagnostics.AddError(
+			"Missing API Token",
+			"API token is required. Set it via the api_token provider attribute or the DURANTIC_API_TOKEN environment variable.",
+		)
+		return
+	}
+
+	// Parse endpoint URL to extract scheme and host
+	parsedURL, err := url.Parse(endpoint)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid Endpoint URL",
+			fmt.Sprintf("Could not parse endpoint URL: %s", err),
+		)
+		return
+	}
+
+	// Create Durantic API client configuration
+	cfg := durantic.NewConfiguration()
+	cfg.Scheme = parsedURL.Scheme
+	cfg.Host = parsedURL.Host
+
+	// Add authorization header
+	cfg.DefaultHeader["Authorization"] = "Bearer " + apiToken
+
+	// Create API client
+	client := durantic.NewAPIClient(cfg)
+
+	// Make client available to resources and data sources
 	resp.DataSourceData = client
 	resp.ResourceData = client
 }
 
-func (p *ScaffoldingProvider) Resources(ctx context.Context) []func() resource.Resource {
+func (p *DuranticProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewExampleResource,
+		NewMeshNetworkResource,
 	}
 }
 
-func (p *ScaffoldingProvider) EphemeralResources(ctx context.Context) []func() ephemeral.EphemeralResource {
+func (p *DuranticProvider) EphemeralResources(ctx context.Context) []func() ephemeral.EphemeralResource {
 	return []func() ephemeral.EphemeralResource{
 		NewExampleEphemeralResource,
 	}
 }
 
-func (p *ScaffoldingProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
+func (p *DuranticProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewExampleDataSource,
 	}
 }
 
-func (p *ScaffoldingProvider) Functions(ctx context.Context) []func() function.Function {
+func (p *DuranticProvider) Functions(ctx context.Context) []func() function.Function {
 	return []func() function.Function{
 		NewExampleFunction,
 	}
@@ -94,7 +145,7 @@ func (p *ScaffoldingProvider) Functions(ctx context.Context) []func() function.F
 
 func New(version string) func() provider.Provider {
 	return func() provider.Provider {
-		return &ScaffoldingProvider{
+		return &DuranticProvider{
 			version: version,
 		}
 	}
