@@ -288,50 +288,21 @@ func (r *MachineResource) ImportState(ctx context.Context, req resource.ImportSt
 	resource.ImportStatePassthroughID(ctx, path.Root("uuid"), req, resp)
 }
 
-// Helper function to map API MachineResponseSchema to Terraform model.
+// mapMachineToResourceModel maps API MachineResponseSchema to Terraform model.
 func mapMachineToResourceModel(ctx context.Context, machine *durantic.MachineResponseSchema, model *MachineResourceModel, diagnostics *diag.Diagnostics) {
-	// Set computed fields
+	// Set computed fields from API response
 	model.Hostname = types.StringValue(machine.GetHostname())
 	model.NeedsProvisioning = types.BoolValue(machine.GetNeedsProvisioning())
 	model.CreatedAt = types.StringValue(machine.GetCreatedAt())
 	model.UpdatedAt = types.StringValue(machine.GetUpdatedAt())
+	model.SystemUuid = stringFromNullable(machine.SystemUuid)
+	model.WgIpAddress = stringFromNullable(machine.WgIpAddress)
+	model.WgPubkey = stringFromNullable(machine.WgPubkey)
+	model.IsOnline = boolFromPointer(machine.IsOnline)
+	model.IsInInitrd = boolFromPointer(machine.IsInInitrd)
 
-	// Handle nullable system_uuid
-	if machine.SystemUuid.IsSet() {
-		model.SystemUuid = types.StringValue(*machine.SystemUuid.Get())
-	} else {
-		model.SystemUuid = types.StringNull()
-	}
-
-	// Handle nullable wg_ip_address
-	if machine.WgIpAddress.IsSet() {
-		model.WgIpAddress = types.StringValue(*machine.WgIpAddress.Get())
-	} else {
-		model.WgIpAddress = types.StringNull()
-	}
-
-	// Handle nullable wg_pubkey
-	if machine.WgPubkey.IsSet() {
-		model.WgPubkey = types.StringValue(*machine.WgPubkey.Get())
-	} else {
-		model.WgPubkey = types.StringNull()
-	}
-
-	// Handle optional bool pointers
-	if machine.IsOnline != nil {
-		model.IsOnline = types.BoolValue(*machine.IsOnline)
-	} else {
-		model.IsOnline = types.BoolValue(false)
-	}
-
-	if machine.IsInInitrd != nil {
-		model.IsInInitrd = types.BoolValue(*machine.IsInInitrd)
-	} else {
-		model.IsInInitrd = types.BoolValue(false)
-	}
-
-	// Only update configurable fields if they're not already set in the plan
-	// This preserves user-provided values
+	// Only update configurable fields if they are not set in the plan.
+	// This preserves user-provided values from the configuration.
 
 	// Handle mesh_network_uuid from API if not set in model
 	if model.MeshNetworkUuid.IsNull() {
@@ -343,48 +314,30 @@ func mapMachineToResourceModel(ctx context.Context, machine *durantic.MachineRes
 		}
 	}
 
-	// Handle advertised_routes
 	if model.AdvertisedRoutes.IsNull() {
-		if len(machine.GetAdvertisedRoutes()) > 0 {
-			routes, diags := types.ListValueFrom(ctx, types.StringType, machine.GetAdvertisedRoutes())
-			diagnostics.Append(diags...)
-			model.AdvertisedRoutes = routes
-		} else {
-			model.AdvertisedRoutes = types.ListNull(types.StringType)
-		}
+		model.AdvertisedRoutes = listFromSlice(ctx, diagnostics, machine.GetAdvertisedRoutes())
 	}
 
-	// Handle docker_registry_auth - convert map to JSON string
 	if model.DockerRegistryAuth.IsNull() {
 		if len(machine.GetDockerRegistryAuth()) > 0 {
 			authJSON, err := json.Marshal(machine.GetDockerRegistryAuth())
-			if err == nil {
-				model.DockerRegistryAuth = types.StringValue(string(authJSON))
-			} else {
+			if err != nil {
+				diagnostics.AddError("Failed to serialize docker_registry_auth",
+					fmt.Sprintf("Could not marshal docker registry auth to JSON: %s", err))
 				model.DockerRegistryAuth = types.StringNull()
+			} else {
+				model.DockerRegistryAuth = types.StringValue(string(authJSON))
 			}
 		} else {
 			model.DockerRegistryAuth = types.StringNull()
 		}
 	}
 
-	// Handle role_names
 	if model.RoleNames.IsNull() {
-		if len(machine.GetRoleNames()) > 0 {
-			roles, diags := types.ListValueFrom(ctx, types.StringType, machine.GetRoleNames())
-			diagnostics.Append(diags...)
-			model.RoleNames = roles
-		} else {
-			model.RoleNames = types.ListNull(types.StringType)
-		}
+		model.RoleNames = listFromSlice(ctx, diagnostics, machine.GetRoleNames())
 	}
 
-	// Handle target_disk
 	if model.TargetDisk.IsNull() {
-		if machine.TargetDisk.IsSet() {
-			model.TargetDisk = types.StringValue(*machine.TargetDisk.Get())
-		} else {
-			model.TargetDisk = types.StringNull()
-		}
+		model.TargetDisk = stringFromNullable(machine.TargetDisk)
 	}
 }

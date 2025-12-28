@@ -14,6 +14,7 @@ import (
 
 	durantic "github.com/durantic/controlplane-client-go/durantic"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -210,4 +211,30 @@ func extractAPIError(httpResp *http.Response, err error) string {
 		return err.Error()
 	}
 	return "unknown error"
+}
+
+// stringFromNullable maps a nullable string from the API to a Terraform string.
+func stringFromNullable(ns durantic.NullableString) types.String {
+	if ns.IsSet() && ns.Get() != nil {
+		return types.StringValue(*ns.Get())
+	}
+	return types.StringNull()
+}
+
+// boolFromPointer maps a bool pointer from the API to a Terraform bool.
+func boolFromPointer(b *bool) types.Bool {
+	if b != nil {
+		return types.BoolValue(*b)
+	}
+	return types.BoolValue(false)
+}
+
+// listFromSlice maps a string slice from the API to a Terraform list.
+func listFromSlice(ctx context.Context, diags *diag.Diagnostics, slice []string) types.List {
+	if len(slice) > 0 {
+		list, d := types.ListValueFrom(ctx, types.StringType, slice)
+		diags.Append(d...)
+		return list
+	}
+	return types.ListNull(types.StringType)
 }

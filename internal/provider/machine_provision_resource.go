@@ -169,7 +169,6 @@ func (r *MachineProvisionResource) Create(ctx context.Context, req resource.Crea
 		data.Status = types.StringValue(fmt.Sprintf("Provisioning triggered successfully (mode: %s)", mode))
 	}
 
-	// Write logs using the tflog package
 	tflog.Trace(ctx, fmt.Sprintf("triggered provisioning for machine %s with mode %s",
 		data.MachineUuid.ValueString(), mode))
 
