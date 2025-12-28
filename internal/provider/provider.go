@@ -19,6 +19,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+const (
+	defaultAPIEndpoint = "https://api.stage.durantic.dev"
+)
+
 // Ensure DuranticProvider satisfies various provider interfaces.
 var _ provider.Provider = &DuranticProvider{}
 var _ provider.ProviderWithFunctions = &DuranticProvider{}
@@ -69,7 +73,7 @@ func (p *DuranticProvider) Configure(ctx context.Context, req provider.Configure
 	}
 
 	// Read endpoint from config, fallback to env var, or use default
-	endpoint := "https://api.durantic.io"
+	endpoint := defaultAPIEndpoint
 	if !data.Endpoint.IsNull() && data.Endpoint.ValueString() != "" {
 		endpoint = data.Endpoint.ValueString()
 	} else if v := os.Getenv("DURANTIC_ENDPOINT"); v != "" {
