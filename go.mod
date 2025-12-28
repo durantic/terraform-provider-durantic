@@ -3,7 +3,7 @@ module github.com/durantic/terraform-provider
 go 1.24.0
 
 require (
-	github.com/durantic/controlplane-client-go/durantic v0.0.0-20251228171042-2619b795e4e5
+	github.com/durantic/controlplane-client-go/durantic v0.0.0-20251228181751-2f6466d085a9
 	github.com/hashicorp/terraform-plugin-framework v1.17.0
 	github.com/hashicorp/terraform-plugin-go v0.29.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
