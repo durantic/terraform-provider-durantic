@@ -5,9 +5,12 @@ package provider
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 
 	durantic "github.com/durantic/controlplane-client-go/durantic"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -38,8 +41,9 @@ type DuranticProvider struct {
 
 // DuranticProviderModel describes the provider data model.
 type DuranticProviderModel struct {
-	Endpoint types.String `tfsdk:"endpoint"`
-	ApiToken types.String `tfsdk:"api_token"`
+	Endpoint           types.String `tfsdk:"endpoint"`
+	ApiToken           types.String `tfsdk:"api_token"`
+	InsecureSkipVerify types.Bool   `tfsdk:"insecure_skip_verify"`
 }
 
 func (p *DuranticProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -58,6 +62,10 @@ func (p *DuranticProvider) Schema(ctx context.Context, req provider.SchemaReques
 				MarkdownDescription: "API token for Durantic authentication. Can also be set via DURANTIC_API_TOKEN environment variable.",
 				Optional:            true,
 				Sensitive:           true,
+			},
+			"insecure_skip_verify": schema.BoolAttribute{
+				MarkdownDescription: "Skip TLS certificate verification. Can also be set via DURANTIC_INSECURE_SKIP_VERIFY environment variable. Defaults to false. **WARNING:** This should only be used in development/testing environments.",
+				Optional:            true,
 			},
 		},
 	}
@@ -97,6 +105,22 @@ func (p *DuranticProvider) Configure(ctx context.Context, req provider.Configure
 		return
 	}
 
+	// Read insecure_skip_verify from config or env var
+	insecureSkipVerify := false
+	if !data.InsecureSkipVerify.IsNull() {
+		insecureSkipVerify = data.InsecureSkipVerify.ValueBool()
+	} else if v := os.Getenv("DURANTIC_INSECURE_SKIP_VERIFY"); v != "" {
+		var err error
+		insecureSkipVerify, err = strconv.ParseBool(v)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Invalid DURANTIC_INSECURE_SKIP_VERIFY Value",
+				fmt.Sprintf("Could not parse DURANTIC_INSECURE_SKIP_VERIFY as boolean: %s", err),
+			)
+			return
+		}
+	}
+
 	// Parse endpoint URL to extract scheme and host
 	parsedURL, err := url.Parse(endpoint)
 	if err != nil {
@@ -111,6 +135,17 @@ func (p *DuranticProvider) Configure(ctx context.Context, req provider.Configure
 	cfg := durantic.NewConfiguration()
 	cfg.Scheme = parsedURL.Scheme
 	cfg.Host = parsedURL.Host
+
+	// Configure custom HTTP client if TLS verification should be skipped
+	if insecureSkipVerify {
+		cfg.HTTPClient = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			},
+		}
+	}
 
 	// Add authorization header
 	cfg.DefaultHeader["Authorization"] = "Bearer " + apiToken
