@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 const (
@@ -89,6 +90,17 @@ func (p *DuranticProvider) Configure(ctx context.Context, req provider.Configure
 		endpoint = defaultAPIEndpoint
 	}
 
+	// Parse endpoint URL to extract scheme and host
+	parsedURL, err := url.Parse(endpoint)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Invalid Endpoint URL",
+			fmt.Sprintf("Could not parse endpoint URL: %s", err),
+		)
+		return
+	}
+	tflog.Debug(ctx, fmt.Sprintf("Using Durantic API endpoint: %s", parsedURL.String()))
+
 	// Read API token from env var or config
 	apiToken := stringCoalesce(os.Getenv(apiTokenEnvName), data.ApiToken.ValueString())
 
@@ -114,16 +126,6 @@ func (p *DuranticProvider) Configure(ctx context.Context, req provider.Configure
 			return
 		}
 		insecureSkipVerify = b
-	}
-
-	// Parse endpoint URL to extract scheme and host
-	parsedURL, err := url.Parse(endpoint)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Invalid Endpoint URL",
-			fmt.Sprintf("Could not parse endpoint URL: %s", err),
-		)
-		return
 	}
 
 	// Create Durantic API client configuration
