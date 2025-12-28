@@ -286,7 +286,7 @@ func (r *MeshNetworkResource) ImportState(ctx context.Context, req resource.Impo
 	resource.ImportStatePassthroughID(ctx, path.Root("uuid"), req, resp)
 }
 
-// Helper function to map API schema to Terraform model
+// Helper function to map API schema to Terraform model.
 func mapMeshNetworkToModel(meshNetwork *durantic.MeshNetworkSchema, model *MeshNetworkResourceModel) {
 	model.UUID = types.StringValue(meshNetwork.GetUuid())
 	model.Name = types.StringValue(meshNetwork.GetName())
@@ -298,7 +298,7 @@ func mapMeshNetworkToModel(meshNetwork *durantic.MeshNetworkSchema, model *MeshN
 	model.UpdatedAt = types.StringValue(meshNetwork.GetUpdatedAt())
 }
 
-// Helper function to extract error details from API responses
+// Helper function to extract error details from API responses.
 func extractAPIError(httpResp *http.Response, err error) string {
 	if err != nil {
 		if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
