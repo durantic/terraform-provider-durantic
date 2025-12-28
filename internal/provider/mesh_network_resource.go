@@ -6,7 +6,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	durantic "github.com/durantic/controlplane-client-go/durantic"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -296,15 +295,4 @@ func mapMeshNetworkToModel(meshNetwork *durantic.MeshNetworkSchema, model *MeshN
 	model.MachineCount = types.Int64Value(int64(meshNetwork.GetMachineCount()))
 	model.CreatedAt = types.StringValue(meshNetwork.GetCreatedAt())
 	model.UpdatedAt = types.StringValue(meshNetwork.GetUpdatedAt())
-}
-
-// Helper function to extract error details from API responses.
-func extractAPIError(httpResp *http.Response, err error) string {
-	if err != nil {
-		if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
-			return fmt.Sprintf("%s: %s", httpResp.Status, apiErr.Error())
-		}
-		return err.Error()
-	}
-	return "unknown error"
 }

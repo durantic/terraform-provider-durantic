@@ -198,3 +198,14 @@ func stringCoalesce(values ...string) string {
 	}
 	return ""
 }
+
+// extractAPIError extracts error details from API response.
+func extractAPIError(httpResp *http.Response, err error) string {
+	if err != nil {
+		if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+			return fmt.Sprintf("%s: %s", httpResp.Status, apiErr.Error())
+		}
+		return err.Error()
+	}
+	return "unknown error"
+}
