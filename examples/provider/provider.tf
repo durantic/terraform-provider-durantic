@@ -1,3 +1,5 @@
+# Copyright (c) HashiCorp, Inc.
+
 # Example 1: Using environment variables (recommended for security)
 # Set these before running terraform:
 #   export DURANTIC_API_TOKEN="your-api-token-here"
