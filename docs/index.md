@@ -36,7 +36,7 @@ provider "durantic" {
 
 # Example 2: Explicit endpoint configuration
 provider "durantic" {
-  endpoint = "https://api.stage.durantic.dev"
+  # endpoint = "https://api.stage.durantic.dev"
   # api_token still read from DURANTIC_API_TOKEN environment variable
 }
 

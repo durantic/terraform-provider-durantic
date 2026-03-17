@@ -52,12 +52,14 @@ resource "durantic_machine_role" "example" {
 - `merge_priority` (Number) Merge priority for the machine role (default 100)
 - `requires_mesh` (Boolean) Whether this machine role requires a mesh network
 - `template_data` (String) Template data for the machine role
+- `vip_uuid` (String) UUID of the VIP associated with this machine role
 
 ### Read-Only
 
 - `created_at` (String) Timestamp when the machine role was created
 - `forked_from_uuid` (String) UUID of the machine role this was forked from
 - `is_official` (Boolean) Whether this is an official machine role
+- `required_image_name` (String) Required image name for this machine role (read-only, computed by API)
 - `updated_at` (String) Timestamp when the machine role was last updated
 - `uuid` (String) Unique identifier for the machine role
 

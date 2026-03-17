@@ -34,14 +34,15 @@ type MeshNetworkResource struct {
 
 // MeshNetworkResourceModel describes the resource data model.
 type MeshNetworkResourceModel struct {
-	UUID             types.String `tfsdk:"uuid"`
-	Name             types.String `tfsdk:"name"`
-	NetworkCIDR      types.String `tfsdk:"network_cidr"`
-	IsDefault        types.Bool   `tfsdk:"is_default"`
-	AvailableIPCount types.Int64  `tfsdk:"available_ip_count"`
-	MachineCount     types.Int64  `tfsdk:"machine_count"`
-	CreatedAt        types.String `tfsdk:"created_at"`
-	UpdatedAt        types.String `tfsdk:"updated_at"`
+	UUID               types.String `tfsdk:"uuid"`
+	Name               types.String `tfsdk:"name"`
+	NetworkCIDR        types.String `tfsdk:"network_cidr"`
+	IsDefault          types.Bool   `tfsdk:"is_default"`
+	RouteReflectorMode types.Bool   `tfsdk:"route_reflector_mode"`
+	AvailableIPCount   types.Int64  `tfsdk:"available_ip_count"`
+	MachineCount       types.Int64  `tfsdk:"machine_count"`
+	CreatedAt          types.String `tfsdk:"created_at"`
+	UpdatedAt          types.String `tfsdk:"updated_at"`
 }
 
 func (r *MeshNetworkResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -73,6 +74,12 @@ func (r *MeshNetworkResource) Schema(ctx context.Context, req resource.SchemaReq
 			},
 			"is_default": schema.BoolAttribute{
 				MarkdownDescription: "Whether this is the default mesh network",
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(false),
+			},
+			"route_reflector_mode": schema.BoolAttribute{
+				MarkdownDescription: "Whether route reflector mode is enabled for this network",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
@@ -145,6 +152,10 @@ func (r *MeshNetworkResource) Create(ctx context.Context, req resource.CreateReq
 	if !data.IsDefault.IsNull() {
 		isDefault := data.IsDefault.ValueBool()
 		createReq.SetIsDefault(isDefault)
+	}
+
+	if !data.RouteReflectorMode.IsNull() {
+		createReq.SetRouteReflectorMode(data.RouteReflectorMode.ValueBool())
 	}
 
 	// Call API to create mesh network
@@ -228,6 +239,10 @@ func (r *MeshNetworkResource) Update(ctx context.Context, req resource.UpdateReq
 		updateReq.SetIsDefault(data.IsDefault.ValueBool())
 	}
 
+	if !data.RouteReflectorMode.IsNull() {
+		updateReq.SetRouteReflectorMode(data.RouteReflectorMode.ValueBool())
+	}
+
 	// Call API to update mesh network
 	meshNetwork, httpResp, err := r.client.MeshNetworksAPI.
 		ControlplaneApiUpdateMeshNetwork(ctx, data.UUID.ValueString()).
@@ -291,6 +306,7 @@ func mapMeshNetworkToModel(meshNetwork *durantic.MeshNetworkSchema, model *MeshN
 	model.Name = types.StringValue(meshNetwork.GetName())
 	model.NetworkCIDR = types.StringValue(meshNetwork.GetNetworkCidr())
 	model.IsDefault = types.BoolValue(meshNetwork.GetIsDefault())
+	model.RouteReflectorMode = types.BoolValue(meshNetwork.GetRouteReflectorMode())
 	model.AvailableIPCount = types.Int64Value(int64(meshNetwork.GetAvailableIpCount()))
 	model.MachineCount = types.Int64Value(int64(meshNetwork.GetMachineCount()))
 	model.CreatedAt = types.StringValue(meshNetwork.GetCreatedAt())

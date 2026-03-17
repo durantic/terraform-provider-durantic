@@ -23,6 +23,7 @@ Mesh network resource for Durantic infrastructure
 ### Optional
 
 - `is_default` (Boolean) Whether this is the default mesh network
+- `route_reflector_mode` (Boolean) Whether route reflector mode is enabled for this network
 
 ### Read-Only
 

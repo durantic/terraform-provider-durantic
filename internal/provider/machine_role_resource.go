@@ -35,17 +35,19 @@ type MachineRoleResource struct {
 
 // MachineRoleResourceModel describes the resource data model.
 type MachineRoleResourceModel struct {
-	UUID           types.String `tfsdk:"uuid"`
-	Name           types.String `tfsdk:"name"`
-	MergePriority  types.Int64  `tfsdk:"merge_priority"`
-	TemplateData   types.String `tfsdk:"template_data"`
-	Description    types.String `tfsdk:"description"`
-	ImageUUID      types.String `tfsdk:"image_uuid"`
-	RequiresMesh   types.Bool   `tfsdk:"requires_mesh"`
-	IsOfficial     types.Bool   `tfsdk:"is_official"`
-	ForkedFromUUID types.String `tfsdk:"forked_from_uuid"`
-	CreatedAt      types.String `tfsdk:"created_at"`
-	UpdatedAt      types.String `tfsdk:"updated_at"`
+	UUID              types.String `tfsdk:"uuid"`
+	Name              types.String `tfsdk:"name"`
+	MergePriority     types.Int64  `tfsdk:"merge_priority"`
+	TemplateData      types.String `tfsdk:"template_data"`
+	Description       types.String `tfsdk:"description"`
+	ImageUUID         types.String `tfsdk:"image_uuid"`
+	RequiresMesh      types.Bool   `tfsdk:"requires_mesh"`
+	IsOfficial        types.Bool   `tfsdk:"is_official"`
+	ForkedFromUUID    types.String `tfsdk:"forked_from_uuid"`
+	VipUUID           types.String `tfsdk:"vip_uuid"`
+	RequiredImageName types.String `tfsdk:"required_image_name"`
+	CreatedAt         types.String `tfsdk:"created_at"`
+	UpdatedAt         types.String `tfsdk:"updated_at"`
 }
 
 func (r *MachineRoleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -89,6 +91,14 @@ func (r *MachineRoleResource) Schema(ctx context.Context, req resource.SchemaReq
 			"image_uuid": schema.StringAttribute{
 				MarkdownDescription: "UUID of the image associated with this machine role",
 				Optional:            true,
+			},
+			"vip_uuid": schema.StringAttribute{
+				MarkdownDescription: "UUID of the VIP associated with this machine role",
+				Optional:            true,
+			},
+			"required_image_name": schema.StringAttribute{
+				MarkdownDescription: "Required image name for this machine role (read-only, computed by API)",
+				Computed:            true,
 			},
 			"requires_mesh": schema.BoolAttribute{
 				MarkdownDescription: "Whether this machine role requires a mesh network",
@@ -162,6 +172,12 @@ func (r *MachineRoleResource) Create(ctx context.Context, req resource.CreateReq
 		createReq.SetImageUuidNil()
 	}
 
+	if !data.VipUUID.IsNull() {
+		createReq.SetVipUuid(data.VipUUID.ValueString())
+	} else {
+		createReq.SetVipUuidNil()
+	}
+
 	machineRole, httpResp, err := r.client.MachineRolesAPI.
 		ControlplaneApiCreateMachineRole(ctx).
 		CreateMachineRoleSchema(*createReq).
@@ -233,6 +249,12 @@ func (r *MachineRoleResource) Update(ctx context.Context, req resource.UpdateReq
 		updateReq.SetImageUuid(data.ImageUUID.ValueString())
 	} else {
 		updateReq.SetImageUuidNil()
+	}
+
+	if !data.VipUUID.IsNull() {
+		updateReq.SetVipUuid(data.VipUUID.ValueString())
+	} else {
+		updateReq.SetVipUuidNil()
 	}
 
 	machineRole, httpResp, err := r.client.MachineRolesAPI.
@@ -309,6 +331,19 @@ func mapMachineRoleToModel(role *durantic.MachineRoleSchema, model *MachineRoleR
 		model.ForkedFromUUID = types.StringValue(*forkedFrom)
 	} else {
 		model.ForkedFromUUID = types.StringNull()
+	}
+
+	vipRef, ok := role.GetVipOk()
+	if ok && vipRef != nil {
+		model.VipUUID = types.StringValue(vipRef.GetUuid())
+	} else {
+		model.VipUUID = types.StringNull()
+	}
+
+	if role.HasRequiredImageName() {
+		model.RequiredImageName = types.StringValue(role.GetRequiredImageName())
+	} else {
+		model.RequiredImageName = types.StringNull()
 	}
 
 	model.CreatedAt = types.StringValue(role.GetCreatedAt())
