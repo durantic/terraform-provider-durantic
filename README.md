@@ -75,7 +75,19 @@ replace github.com/durantic/controlplane-client-go/durantic => <path-to-your-loc
 |------------------------|-------------|
 | `durantic_machine_role` | Manages a Durantic machine role — a named configuration template (cloud-init data, merge priority, mesh requirement) applied to machines. |
 
-## Usage Example
+## Examples
+
+The [`examples/`](examples/) directory contains ready-to-use configurations:
+
+| Path | Description |
+|------|-------------|
+| [`examples/provider/provider.tf`](examples/provider/provider.tf) | Provider configuration patterns (env vars, explicit config, aliases, etc.) |
+| [`examples/resources/durantic_machine_role/resource.tf`](examples/resources/durantic_machine_role/resource.tf) | Minimal and full machine role resource examples |
+| [`examples/resources/durantic_machine_role/import.sh`](examples/resources/durantic_machine_role/import.sh) | Importing an existing resource by UUID |
+
+> These example files are also used to generate the documentation under `docs/`.
+
+### Usage Example
 
 ```hcl
 terraform {
@@ -121,6 +133,49 @@ Set credentials before running acceptance tests:
 export DURANTIC_API_TOKEN="your-token"
 export DURANTIC_ENDPOINT="https://api.stage.durantic.dev"  # optional
 make testacc
+```
+
+## Local Development Setup
+
+### Build & install the provider locally
+
+```bash
+make install
+# equivalent: go install -v ./...
+# Installs binary to $GOPATH/bin (e.g. ~/go/bin/terraform-provider-durantic)
+```
+
+### Configure `.terraformrc` for dev overrides
+
+Terraform reads `~/.terraformrc` to override provider resolution. Create or edit this file to point Terraform at your locally built binary. Replace USERNAME with your home directory:
+
+```hcl
+provider_installation {
+  dev_overrides {
+    "registry.durantic.io/durantic/durantic" = "/home/USERNAME/go/bin"
+  }
+
+  # For all other providers, install them directly from their origin
+  # registries as normal. If you omit this, Terraform will _only_ use
+  # the dev_overrides block, and so no other providers will be available.
+  direct {}
+}
+```
+
+The path must point to the directory containing the `terraform-provider-durantic` binary (i.e. `$GOPATH/bin`). With dev overrides active, `terraform init` is not required for the overridden provider — just run `terraform plan`/`apply` directly.
+
+### End-to-end workflow
+
+```bash
+# 1. Build and install
+make install
+
+# 2. Set credentials
+export DURANTIC_API_TOKEN="your-token"
+
+# 3. Point to a local .tf file and run
+cd /path/to/your/tf/config
+terraform plan
 ```
 
 ## Adding New Resources
