@@ -1,4 +1,4 @@
-module github.com/durantic/terraform-provider
+module github.com/durantic/terraform-provider-durantic
 
 go 1.26
 
