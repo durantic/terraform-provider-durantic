@@ -166,7 +166,9 @@ func (p *DuranticProvider) EphemeralResources(ctx context.Context) []func() ephe
 }
 
 func (p *DuranticProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{}
+	return []func() datasource.DataSource{
+		NewImagesDataSource,
+	}
 }
 
 func (p *DuranticProvider) Functions(ctx context.Context) []func() function.Function {
