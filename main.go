@@ -8,7 +8,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/durantic/terraform-provider/internal/provider"
+	"github.com/durantic/terraform-provider-durantic/internal/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 )
 
