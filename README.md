@@ -75,13 +75,20 @@ replace github.com/durantic/controlplane-client-go/durantic => <path-to-your-loc
 |------------------------|-------------|
 | `durantic_machine_role` | Manages a Durantic machine role — a named configuration template (cloud-init data, merge priority, mesh requirement) applied to machines. |
 
+## Data Sources
+
+| Data Source       | Description |
+|-------------------|-------------|
+| `durantic_images` | Lists all images available to the account (own and official). |
+
 ## Examples
 
 The [`examples/`](examples/) directory contains ready-to-use configurations:
 
 | Path | Description |
 |------|-------------|
-| [`examples/provider/provider.tf`](examples/provider/provider.tf) | Provider configuration patterns (env vars, explicit config, aliases, etc.) |
+| [`examples/provider/provider.tf`](examples/provider/provider.tf) | Provider configuration |
+| [`examples/data-sources/durantic_images/data-source.tf`](examples/data-sources/durantic_images/data-source.tf) | Listing images and looking up by name |
 | [`examples/resources/durantic_machine_role/resource.tf`](examples/resources/durantic_machine_role/resource.tf) | Minimal and full machine role resource examples |
 | [`examples/resources/durantic_machine_role/import.sh`](examples/resources/durantic_machine_role/import.sh) | Importing an existing resource by UUID |
 
@@ -103,9 +110,20 @@ provider "durantic" {
   # api_token read from DURANTIC_API_TOKEN
 }
 
+# Look up an image by name
+data "durantic_images" "all" {}
+
+locals {
+  ubuntu_image = one([
+    for img in data.durantic_images.all.images : img
+    if strcontains(img.name, "ubuntu-25")
+  ])
+}
+
 resource "durantic_machine_role" "example" {
   name           = "web-server"
   description    = "Base web server configuration"
+  image_uuid     = local.ubuntu_image.uuid
   merge_priority = 100
   requires_mesh  = false
 
