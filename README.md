@@ -188,8 +188,9 @@ The path must point to the directory containing the `terraform-provider-durantic
 # 1. Build and install
 make install
 
-# 2. Set credentials
+# 2. Set credentials and API endpoint
 export DURANTIC_API_TOKEN="your-token"
+export DURANTIC_ENDPOINT="https://api.dev.durantic.io"
 
 # 3. Point to a local .tf file and run
 cd /path/to/your/tf/config
