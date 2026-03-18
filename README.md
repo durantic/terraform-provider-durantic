@@ -2,7 +2,7 @@
 
 A Terraform provider for managing [Durantic](https://durantic.io) infrastructure resources.
 
-**Registry address:** `registry.durantic.io/durantic/durantic`
+**Registry address:** `registry.durantic.io/durantic/durantic` [WIP]
 
 ## Requirements
 
