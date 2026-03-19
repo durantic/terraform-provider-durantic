@@ -74,6 +74,7 @@ replace github.com/durantic/controlplane-client-go/durantic => <path-to-your-loc
 | Resource               | Description |
 |------------------------|-------------|
 | `durantic_machine_role` | Manages a Durantic machine role — a named configuration template (cloud-init data, merge priority, mesh requirement) applied to machines. |
+| `durantic_mesh_network` | Manages a Durantic mesh network — a WireGuard-based overlay network with a defined CIDR block, default flag, and route reflector mode. |
 
 ## Data Sources
 
@@ -90,7 +91,9 @@ The [`examples/`](examples/) directory contains ready-to-use configurations:
 | [`examples/provider/provider.tf`](examples/provider/provider.tf) | Provider configuration |
 | [`examples/data-sources/durantic_images/data-source.tf`](examples/data-sources/durantic_images/data-source.tf) | Listing images and looking up by name |
 | [`examples/resources/durantic_machine_role/resource.tf`](examples/resources/durantic_machine_role/resource.tf) | Minimal and full machine role resource examples |
-| [`examples/resources/durantic_machine_role/import.sh`](examples/resources/durantic_machine_role/import.sh) | Importing an existing resource by UUID |
+| [`examples/resources/durantic_machine_role/import.sh`](examples/resources/durantic_machine_role/import.sh) | Importing an existing machine role by UUID |
+| [`examples/resources/durantic_mesh_network/resource.tf`](examples/resources/durantic_mesh_network/resource.tf) | Minimal and full mesh network resource examples |
+| [`examples/resources/durantic_mesh_network/import.sh`](examples/resources/durantic_mesh_network/import.sh) | Importing an existing mesh network by UUID |
 
 > These example files are also used to generate the documentation under `docs/`.
 
