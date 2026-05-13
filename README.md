@@ -73,8 +73,10 @@ replace github.com/durantic/controlplane-client-go/durantic => <path-to-your-loc
 
 | Resource               | Description |
 |------------------------|-------------|
-| `durantic_machine_role` | Manages a Durantic machine role — a named configuration template (cloud-init data, merge priority, mesh requirement) applied to machines. |
+| `durantic_machine_role` | Manages a Durantic machine role — a named configuration template (cloud-init data, merge priority, mesh requirement, optional VIP association) applied to machines. |
 | `durantic_mesh_network` | Manages a Durantic mesh network — a WireGuard-based overlay network with a defined CIDR block, default flag, and route reflector mode. |
+| `durantic_route`        | Manages a Durantic route — a named set of network prefixes with optional machine associations and enable/disable control. |
+| `durantic_vip`          | Manages a Durantic Virtual IP (VIP) — an IP address with configurable health checks and optional machine associations. |
 
 ## Data Sources
 
@@ -94,6 +96,10 @@ The [`examples/`](examples/) directory contains ready-to-use configurations:
 | [`examples/resources/durantic_machine_role/import.sh`](examples/resources/durantic_machine_role/import.sh) | Importing an existing machine role by UUID |
 | [`examples/resources/durantic_mesh_network/resource.tf`](examples/resources/durantic_mesh_network/resource.tf) | Minimal and full mesh network resource examples |
 | [`examples/resources/durantic_mesh_network/import.sh`](examples/resources/durantic_mesh_network/import.sh) | Importing an existing mesh network by UUID |
+| [`examples/resources/durantic_route/resource.tf`](examples/resources/durantic_route/resource.tf) | Minimal and full route resource examples |
+| [`examples/resources/durantic_route/import.sh`](examples/resources/durantic_route/import.sh) | Importing an existing route by UUID |
+| [`examples/resources/durantic_vip/resource.tf`](examples/resources/durantic_vip/resource.tf) | Minimal and full VIP resource examples |
+| [`examples/resources/durantic_vip/import.sh`](examples/resources/durantic_vip/import.sh) | Importing an existing VIP by UUID |
 
 > These example files are also used to generate the documentation under `docs/`.
 
