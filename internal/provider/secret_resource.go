@@ -117,7 +117,7 @@ func (r *SecretResource) Create(ctx context.Context, req resource.CreateRequest,
 		CreateAccountSecretSchema(*createReq).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		resp.Diagnostics.AddError(
 			"Error Creating Secret",
 			fmt.Sprintf("Could not create secret, unexpected error: %s", extractAPIError(httpResp, err)),
@@ -147,7 +147,7 @@ func (r *SecretResource) Read(ctx context.Context, req resource.ReadRequest, res
 		ControlplaneApiGetAccountSecret(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			resp.State.RemoveResource(ctx)
 			return
@@ -186,7 +186,7 @@ func (r *SecretResource) Update(ctx context.Context, req resource.UpdateRequest,
 		UpdateAccountSecretSchema(*updateReq).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		resp.Diagnostics.AddError(
 			"Error Updating Secret",
 			fmt.Sprintf("Could not update secret %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -214,7 +214,7 @@ func (r *SecretResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		ControlplaneApiDeleteAccountSecret(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			tflog.Trace(ctx, "secret already deleted")
 			return

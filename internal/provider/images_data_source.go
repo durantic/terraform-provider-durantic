@@ -126,7 +126,7 @@ func (d *ImagesDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 
 	images, httpResp, err := d.client.ImagesAPI.ProvisioningApiListImages(ctx).Execute()
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		resp.Diagnostics.AddError(
 			"Error Listing Images",
 			fmt.Sprintf("Could not list images: %s", extractAPIError(httpResp, err)),

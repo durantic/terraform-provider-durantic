@@ -195,7 +195,7 @@ func (r *VIPResource) Create(ctx context.Context, req resource.CreateRequest, re
 		CreateVIPSchema(*createReq).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		resp.Diagnostics.AddError(
 			"Error Creating VIP",
 			fmt.Sprintf("Could not create VIP, unexpected error: %s", extractAPIError(httpResp, err)),
@@ -225,7 +225,7 @@ func (r *VIPResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		ControlplaneApiGetVip(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			resp.State.RemoveResource(ctx)
 			return
@@ -282,7 +282,7 @@ func (r *VIPResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		UpdateVIPSchema(*updateReq).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		resp.Diagnostics.AddError(
 			"Error Updating VIP",
 			fmt.Sprintf("Could not update VIP %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -310,7 +310,7 @@ func (r *VIPResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		ControlplaneApiDeleteVip(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			tflog.Trace(ctx, "VIP already deleted")
 			return

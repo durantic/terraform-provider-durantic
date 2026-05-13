@@ -116,7 +116,7 @@ func (r *VariableResource) Create(ctx context.Context, req resource.CreateReques
 		CreateAccountVariableSchema(*createReq).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		resp.Diagnostics.AddError(
 			"Error Creating Variable",
 			fmt.Sprintf("Could not create variable, unexpected error: %s", extractAPIError(httpResp, err)),
@@ -143,7 +143,7 @@ func (r *VariableResource) Read(ctx context.Context, req resource.ReadRequest, r
 		ControlplaneApiGetAccountVariable(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			resp.State.RemoveResource(ctx)
 			return
@@ -179,7 +179,7 @@ func (r *VariableResource) Update(ctx context.Context, req resource.UpdateReques
 		UpdateAccountVariableSchema(*updateReq).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		resp.Diagnostics.AddError(
 			"Error Updating Variable",
 			fmt.Sprintf("Could not update variable %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -204,7 +204,7 @@ func (r *VariableResource) Delete(ctx context.Context, req resource.DeleteReques
 		ControlplaneApiDeleteAccountVariable(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			tflog.Trace(ctx, "variable already deleted")
 			return

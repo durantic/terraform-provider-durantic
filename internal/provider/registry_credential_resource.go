@@ -137,7 +137,7 @@ func (r *RegistryCredentialResource) Create(ctx context.Context, req resource.Cr
 		CreateRegistryCredentialSchema(*createReq).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		resp.Diagnostics.AddError(
 			"Error Creating Registry Credential",
 			fmt.Sprintf("Could not create registry credential, unexpected error: %s", extractAPIError(httpResp, err)),
@@ -167,7 +167,7 @@ func (r *RegistryCredentialResource) Read(ctx context.Context, req resource.Read
 		ProvisioningApiGetRegistryCredential(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			resp.State.RemoveResource(ctx)
 			return
@@ -208,7 +208,7 @@ func (r *RegistryCredentialResource) Update(ctx context.Context, req resource.Up
 		UpdateRegistryCredentialSchema(*updateReq).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		resp.Diagnostics.AddError(
 			"Error Updating Registry Credential",
 			fmt.Sprintf("Could not update registry credential %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -236,7 +236,7 @@ func (r *RegistryCredentialResource) Delete(ctx context.Context, req resource.De
 		ProvisioningApiDeleteRegistryCredential(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			tflog.Trace(ctx, "registry credential already deleted")
 			return

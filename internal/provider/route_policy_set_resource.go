@@ -263,7 +263,7 @@ func (r *RoutePolicySetResource) Create(ctx context.Context, req resource.Create
 		CreateRoutePolicySetSchema(*createReq).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		resp.Diagnostics.AddError(
 			"Error Creating Route Policy Set",
 			fmt.Sprintf("Could not create route policy set, unexpected error: %s", extractAPIError(httpResp, err)),
@@ -320,7 +320,7 @@ func (r *RoutePolicySetResource) Read(ctx context.Context, req resource.ReadRequ
 		ControlplaneApiGetRoutePolicySet(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			resp.State.RemoveResource(ctx)
 			return
@@ -377,7 +377,7 @@ func (r *RoutePolicySetResource) Update(ctx context.Context, req resource.Update
 		UpdateRoutePolicySetSchema(*updateReq).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		resp.Diagnostics.AddError(
 			"Error Updating Route Policy Set",
 			fmt.Sprintf("Could not update route policy set %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -488,7 +488,7 @@ func (r *RoutePolicySetResource) Delete(ctx context.Context, req resource.Delete
 		ControlplaneApiDeleteRoutePolicySet(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			tflog.Trace(ctx, "route policy set already deleted")
 			return

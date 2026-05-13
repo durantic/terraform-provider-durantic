@@ -144,7 +144,7 @@ func (r *RouteResource) Create(ctx context.Context, req resource.CreateRequest, 
 		CreateRouteSchema(*createReq).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		resp.Diagnostics.AddError(
 			"Error Creating Route",
 			fmt.Sprintf("Could not create route, unexpected error: %s", extractAPIError(httpResp, err)),
@@ -174,7 +174,7 @@ func (r *RouteResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		ControlplaneApiGetRoute(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			resp.State.RemoveResource(ctx)
 			return
@@ -230,7 +230,7 @@ func (r *RouteResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		UpdateRouteSchema(*updateReq).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		resp.Diagnostics.AddError(
 			"Error Updating Route",
 			fmt.Sprintf("Could not update route %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -258,7 +258,7 @@ func (r *RouteResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		ControlplaneApiDeleteRoute(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			tflog.Trace(ctx, "route already deleted")
 			return

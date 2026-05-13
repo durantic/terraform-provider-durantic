@@ -185,7 +185,7 @@ func (r *SecretsBackendResource) Read(ctx context.Context, req resource.ReadRequ
 		ControlplaneApiGetSecretsBackend(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			resp.State.RemoveResource(ctx)
 			return
@@ -246,7 +246,7 @@ func (r *SecretsBackendResource) Update(ctx context.Context, req resource.Update
 		UpdateSecretsBackendSchema(*updateReq).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		resp.Diagnostics.AddError(
 			"Error Updating Secrets Backend",
 			fmt.Sprintf("Could not update secrets backend %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -274,7 +274,7 @@ func (r *SecretsBackendResource) Delete(ctx context.Context, req resource.Delete
 		ControlplaneApiDeleteSecretsBackend(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			tflog.Trace(ctx, "secrets backend already deleted")
 			return

@@ -143,7 +143,7 @@ func (r *MeshNetworkResource) Create(ctx context.Context, req resource.CreateReq
 		CreateMeshNetworkSchema(*createReq).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		resp.Diagnostics.AddError(
 			"Error Creating Mesh Network",
 			fmt.Sprintf("Could not create mesh network, unexpected error: %s", extractAPIError(httpResp, err)),
@@ -171,7 +171,7 @@ func (r *MeshNetworkResource) Read(ctx context.Context, req resource.ReadRequest
 		ControlplaneApiGetMeshNetwork(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			resp.State.RemoveResource(ctx)
 			return
@@ -208,7 +208,7 @@ func (r *MeshNetworkResource) Update(ctx context.Context, req resource.UpdateReq
 		UpdateMeshNetworkSchema(*updateReq).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		resp.Diagnostics.AddError(
 			"Error Updating Mesh Network",
 			fmt.Sprintf("Could not update mesh network %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -234,7 +234,7 @@ func (r *MeshNetworkResource) Delete(ctx context.Context, req resource.DeleteReq
 		ControlplaneApiDeleteMeshNetwork(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			tflog.Trace(ctx, "mesh network already deleted")
 			return
