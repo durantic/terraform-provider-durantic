@@ -161,6 +161,11 @@ func (p *DuranticProvider) Resources(ctx context.Context) []func() resource.Reso
 		NewMeshNetworkResource,
 		NewRouteResource,
 		NewVIPResource,
+		NewRegistryCredentialResource,
+		NewSecretsBackendResource,
+		NewSecretResource,
+		NewVariableResource,
+		NewRoutePolicySetResource,
 	}
 }
 
@@ -200,6 +205,9 @@ func stringCoalesce(values ...string) string {
 func extractAPIError(httpResp *http.Response, err error) string {
 	if err != nil {
 		if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+			if body := string(apiErr.Body()); body != "" {
+				return fmt.Sprintf("%s: %s", httpResp.Status, body)
+			}
 			return fmt.Sprintf("%s: %s", httpResp.Status, apiErr.Error())
 		}
 		return err.Error()
