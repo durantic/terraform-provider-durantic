@@ -168,14 +168,10 @@ func (r *MachineRoleResource) Create(ctx context.Context, req resource.CreateReq
 
 	if !data.ImageUUID.IsNull() {
 		createReq.SetImageUuid(data.ImageUUID.ValueString())
-	} else {
-		createReq.SetImageUuidNil()
 	}
 
 	if !data.VipUUID.IsNull() {
 		createReq.SetVipUuid(data.VipUUID.ValueString())
-	} else {
-		createReq.SetVipUuidNil()
 	}
 
 	machineRole, httpResp, err := r.client.MachineRolesAPI.
@@ -247,14 +243,10 @@ func (r *MachineRoleResource) Update(ctx context.Context, req resource.UpdateReq
 
 	if !data.ImageUUID.IsNull() {
 		updateReq.SetImageUuid(data.ImageUUID.ValueString())
-	} else {
-		updateReq.SetImageUuidNil()
 	}
 
 	if !data.VipUUID.IsNull() {
 		updateReq.SetVipUuid(data.VipUUID.ValueString())
-	} else {
-		updateReq.SetVipUuidNil()
 	}
 
 	machineRole, httpResp, err := r.client.MachineRolesAPI.
