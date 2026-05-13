@@ -77,6 +77,11 @@ replace github.com/durantic/controlplane-client-go/durantic => <path-to-your-loc
 | `durantic_mesh_network` | Manages a Durantic mesh network — a WireGuard-based overlay network with a defined CIDR block, default flag, and route reflector mode. |
 | `durantic_route`        | Manages a Durantic route — a named set of network prefixes with optional machine associations and enable/disable control. |
 | `durantic_vip`          | Manages a Durantic Virtual IP (VIP) — an IP address with configurable health checks and optional machine associations. |
+| `durantic_registry_credential` | Manages a Durantic registry credential — authentication details (URL, username, password) for a container image registry. |
+| `durantic_secrets_backend` | Manages a Durantic secrets backend — an external secrets store (Vault or HTTP) that supplies secrets to workloads. |
+| `durantic_secret`       | Manages a Durantic account secret — a named sensitive value stored encrypted. The value is write-only (never returned by the API). |
+| `durantic_variable`     | Manages a Durantic account variable — a named key/value pair available to workloads. |
+| `durantic_route_policy_set` | Manages a Durantic route policy set — an ordered list of BGP route policy rules with nested `rules` blocks. |
 
 ## Data Sources
 
@@ -100,6 +105,16 @@ The [`examples/`](examples/) directory contains ready-to-use configurations:
 | [`examples/resources/durantic_route/import.sh`](examples/resources/durantic_route/import.sh) | Importing an existing route by UUID |
 | [`examples/resources/durantic_vip/resource.tf`](examples/resources/durantic_vip/resource.tf) | Minimal and full VIP resource examples |
 | [`examples/resources/durantic_vip/import.sh`](examples/resources/durantic_vip/import.sh) | Importing an existing VIP by UUID |
+| [`examples/resources/durantic_registry_credential/resource.tf`](examples/resources/durantic_registry_credential/resource.tf) | Minimal and full registry credential examples |
+| [`examples/resources/durantic_registry_credential/import.sh`](examples/resources/durantic_registry_credential/import.sh) | Importing an existing registry credential by UUID |
+| [`examples/resources/durantic_secrets_backend/resource.tf`](examples/resources/durantic_secrets_backend/resource.tf) | HTTP and Vault secrets backend examples |
+| [`examples/resources/durantic_secrets_backend/import.sh`](examples/resources/durantic_secrets_backend/import.sh) | Importing an existing secrets backend by UUID |
+| [`examples/resources/durantic_secret/resource.tf`](examples/resources/durantic_secret/resource.tf) | Minimal and full secret resource examples |
+| [`examples/resources/durantic_secret/import.sh`](examples/resources/durantic_secret/import.sh) | Importing an existing secret by UUID (value must be set manually after import) |
+| [`examples/resources/durantic_variable/resource.tf`](examples/resources/durantic_variable/resource.tf) | Minimal and full variable resource examples |
+| [`examples/resources/durantic_variable/import.sh`](examples/resources/durantic_variable/import.sh) | Importing an existing variable by UUID |
+| [`examples/resources/durantic_route_policy_set/resource.tf`](examples/resources/durantic_route_policy_set/resource.tf) | Policy set with and without nested rules |
+| [`examples/resources/durantic_route_policy_set/import.sh`](examples/resources/durantic_route_policy_set/import.sh) | Importing an existing route policy set by UUID |
 
 > These example files are also used to generate the documentation under `docs/`.
 
