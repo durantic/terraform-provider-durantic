@@ -73,6 +73,7 @@ replace github.com/durantic/controlplane-client-go/durantic => <path-to-your-loc
 
 | Resource               | Description |
 |------------------------|-------------|
+| `durantic_machine_config` | Manages desired configuration for an existing Durantic machine — mesh network assignment, role names, tunnel settings, and provisioning-related config flags. |
 | `durantic_machine_role` | Manages a Durantic machine role — a named configuration template (cloud-init data, merge priority, mesh requirement, optional VIP association) applied to machines. |
 | `durantic_mesh_network` | Manages a Durantic mesh network — a WireGuard-based overlay network with a defined CIDR block, default flag, and route reflector mode. |
 | `durantic_route`        | Manages a Durantic route — a named set of network prefixes with optional machine associations and enable/disable control. |
@@ -87,6 +88,8 @@ replace github.com/durantic/controlplane-client-go/durantic => <path-to-your-loc
 
 | Data Source       | Description |
 |-------------------|-------------|
+| `durantic_machine` | Looks up an existing machine by UUID or hostname, including role, mesh, public IP, and status fields. |
+| `durantic_image` | Looks up a single image by UUID, name, or Docker image URL. |
 | `durantic_images` | Lists all images available to the account (own and official). |
 
 ## Examples
@@ -96,7 +99,11 @@ The [`examples/`](examples/) directory contains ready-to-use configurations:
 | Path | Description |
 |------|-------------|
 | [`examples/provider/provider.tf`](examples/provider/provider.tf) | Provider configuration |
+| [`examples/data-sources/durantic_machine/data-source.tf`](examples/data-sources/durantic_machine/data-source.tf) | Looking up a machine and its public/mesh IPs |
+| [`examples/data-sources/durantic_image/data-source.tf`](examples/data-sources/durantic_image/data-source.tf) | Looking up a single image by Docker image URL or name |
 | [`examples/data-sources/durantic_images/data-source.tf`](examples/data-sources/durantic_images/data-source.tf) | Listing images and looking up by name |
+| [`examples/resources/durantic_machine_config/resource.tf`](examples/resources/durantic_machine_config/resource.tf) | Assigning Terraform-created roles and a mesh network to an existing machine |
+| [`examples/resources/durantic_machine_config/import.sh`](examples/resources/durantic_machine_config/import.sh) | Importing existing machine config by machine UUID |
 | [`examples/resources/durantic_machine_role/resource.tf`](examples/resources/durantic_machine_role/resource.tf) | Minimal and full machine role resource examples |
 | [`examples/resources/durantic_machine_role/import.sh`](examples/resources/durantic_machine_role/import.sh) | Importing an existing machine role by UUID |
 | [`examples/resources/durantic_mesh_network/resource.tf`](examples/resources/durantic_mesh_network/resource.tf) | Minimal and full mesh network resource examples |
