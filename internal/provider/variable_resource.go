@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	durantic "github.com/durantic/controlplane-client-go/durantic"
@@ -117,6 +118,27 @@ func (r *VariableResource) Create(ctx context.Context, req resource.CreateReques
 		Execute()
 
 	if err != nil {
+		if httpResp != nil && httpResp.StatusCode >= 300 {
+			resp.Diagnostics.AddError(
+				"Error Creating Variable",
+				fmt.Sprintf("Could not create variable, unexpected error: %s", extractAPIError(httpResp, err)),
+			)
+			return
+		}
+		if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+			var raw accountVariableRaw
+			if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr != nil {
+				resp.Diagnostics.AddError(
+					"Error Creating Variable",
+					fmt.Sprintf("Could not parse variable response: %s", jsonErr),
+				)
+				return
+			}
+			mapRawToVariableModel(&raw, &data)
+			tflog.Trace(ctx, "created variable")
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error Creating Variable",
 			fmt.Sprintf("Could not create variable, unexpected error: %s", extractAPIError(httpResp, err)),
@@ -148,7 +170,16 @@ func (r *VariableResource) Read(ctx context.Context, req resource.ReadRequest, r
 			resp.State.RemoveResource(ctx)
 			return
 		}
-
+		if httpResp != nil && httpResp.StatusCode < 300 {
+			if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+				var raw accountVariableRaw
+				if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr == nil {
+					mapRawToVariableModel(&raw, &data)
+					resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+					return
+				}
+			}
+		}
 		resp.Diagnostics.AddError(
 			"Error Reading Variable",
 			fmt.Sprintf("Could not read variable %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -180,6 +211,16 @@ func (r *VariableResource) Update(ctx context.Context, req resource.UpdateReques
 		Execute()
 
 	if err != nil {
+		if httpResp != nil && httpResp.StatusCode < 300 {
+			if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+				var raw accountVariableRaw
+				if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr == nil {
+					mapRawToVariableModel(&raw, &data)
+					resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+					return
+				}
+			}
+		}
 		resp.Diagnostics.AddError(
 			"Error Updating Variable",
 			fmt.Sprintf("Could not update variable %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -204,7 +245,7 @@ func (r *VariableResource) Delete(ctx context.Context, req resource.DeleteReques
 		ControlplaneApiDeleteAccountVariable(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			tflog.Trace(ctx, "variable already deleted")
 			return
@@ -222,6 +263,24 @@ func (r *VariableResource) Delete(ctx context.Context, req resource.DeleteReques
 
 func (r *VariableResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("uuid"), req, resp)
+}
+
+type accountVariableRaw struct {
+	UUID        string `json:"uuid"`
+	Name        string `json:"name"`
+	Value       string `json:"value"`
+	Description string `json:"description"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
+}
+
+func mapRawToVariableModel(raw *accountVariableRaw, model *VariableResourceModel) {
+	model.UUID = types.StringValue(raw.UUID)
+	model.Name = types.StringValue(raw.Name)
+	model.Value = types.StringValue(raw.Value)
+	model.Description = types.StringValue(raw.Description)
+	model.CreatedAt = types.StringValue(raw.CreatedAt)
+	model.UpdatedAt = types.StringValue(raw.UpdatedAt)
 }
 
 func mapVariableToModel(v *durantic.AccountVariableSchema, model *VariableResourceModel) {

@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	durantic "github.com/durantic/controlplane-client-go/durantic"
@@ -180,6 +181,28 @@ func (r *MachineRoleResource) Create(ctx context.Context, req resource.CreateReq
 		Execute()
 
 	if err != nil {
+		if httpResp != nil && httpResp.StatusCode >= 300 {
+			resp.Diagnostics.AddError(
+				"Error Creating Machine Role",
+				fmt.Sprintf("Could not create machine role, unexpected error: %s", extractAPIError(httpResp, err)),
+			)
+			return
+		}
+		// 2xx with deserialization error — parse raw body manually
+		if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+			var raw mapMachineRoleRaw
+			if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr != nil {
+				resp.Diagnostics.AddError(
+					"Error Creating Machine Role",
+					fmt.Sprintf("Could not parse machine role response: %s", jsonErr),
+				)
+				return
+			}
+			mapRawToMachineRoleModel(&raw, &data)
+			tflog.Trace(ctx, "created machine role")
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error Creating Machine Role",
 			fmt.Sprintf("Could not create machine role, unexpected error: %s", extractAPIError(httpResp, err)),
@@ -212,7 +235,16 @@ func (r *MachineRoleResource) Read(ctx context.Context, req resource.ReadRequest
 			resp.State.RemoveResource(ctx)
 			return
 		}
-
+		if httpResp != nil && httpResp.StatusCode < 300 {
+			if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+				var raw mapMachineRoleRaw
+				if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr == nil {
+					mapRawToMachineRoleModel(&raw, &data)
+					resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+					return
+				}
+			}
+		}
 		resp.Diagnostics.AddError(
 			"Error Reading Machine Role",
 			fmt.Sprintf("Could not read machine role %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -255,6 +287,16 @@ func (r *MachineRoleResource) Update(ctx context.Context, req resource.UpdateReq
 		Execute()
 
 	if err != nil {
+		if httpResp != nil && httpResp.StatusCode < 300 {
+			if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+				var raw mapMachineRoleRaw
+				if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr == nil {
+					mapRawToMachineRoleModel(&raw, &data)
+					resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+					return
+				}
+			}
+		}
 		resp.Diagnostics.AddError(
 			"Error Updating Machine Role",
 			fmt.Sprintf("Could not update machine role %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -280,7 +322,7 @@ func (r *MachineRoleResource) Delete(ctx context.Context, req resource.DeleteReq
 		ControlplaneApiDeleteMachineRole(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			tflog.Trace(ctx, "machine role already deleted")
 			return
@@ -340,4 +382,66 @@ func mapMachineRoleToModel(role *durantic.MachineRoleSchema, model *MachineRoleR
 
 	model.CreatedAt = types.StringValue(role.GetCreatedAt())
 	model.UpdatedAt = types.StringValue(role.GetUpdatedAt())
+}
+
+// mapMachineRoleRaw is a tolerant JSON struct for parsing API responses
+// that may contain fields not yet in the generated client model.
+type mapMachineRoleRaw struct {
+	UUID          string `json:"uuid"`
+	Name          string `json:"name"`
+	MergePriority int32  `json:"merge_priority"`
+	TemplateData  string `json:"template_data"`
+	Description   string `json:"description"`
+	Image         *struct {
+		UUID string `json:"uuid"`
+	} `json:"image"`
+	Vip *struct {
+		UUID string `json:"uuid"`
+	} `json:"vip"`
+	IsOfficial        bool    `json:"is_official"`
+	RequiresMesh      bool    `json:"requires_mesh"`
+	ForkedFromUUID    *string `json:"forked_from_uuid"`
+	RequiredImageName *string `json:"required_image_name"`
+	RequiredImageURL  *string `json:"required_image_url"`
+	CreatedAt         string  `json:"created_at"`
+	UpdatedAt         string  `json:"updated_at"`
+}
+
+func mapRawToMachineRoleModel(raw *mapMachineRoleRaw, model *MachineRoleResourceModel) {
+	model.UUID = types.StringValue(raw.UUID)
+	model.Name = types.StringValue(raw.Name)
+	model.MergePriority = types.Int64Value(int64(raw.MergePriority))
+	model.TemplateData = types.StringValue(raw.TemplateData)
+	model.Description = types.StringValue(raw.Description)
+	model.RequiresMesh = types.BoolValue(raw.RequiresMesh)
+	model.IsOfficial = types.BoolValue(raw.IsOfficial)
+
+	if raw.Image != nil {
+		model.ImageUUID = types.StringValue(raw.Image.UUID)
+	} else {
+		model.ImageUUID = types.StringNull()
+	}
+
+	if raw.Vip != nil {
+		model.VipUUID = types.StringValue(raw.Vip.UUID)
+	} else {
+		model.VipUUID = types.StringNull()
+	}
+
+	if raw.ForkedFromUUID != nil {
+		model.ForkedFromUUID = types.StringValue(*raw.ForkedFromUUID)
+	} else {
+		model.ForkedFromUUID = types.StringNull()
+	}
+
+	if raw.RequiredImageName != nil {
+		model.RequiredImageName = types.StringValue(*raw.RequiredImageName)
+	} else if raw.RequiredImageURL != nil {
+		model.RequiredImageName = types.StringValue(*raw.RequiredImageURL)
+	} else {
+		model.RequiredImageName = types.StringNull()
+	}
+
+	model.CreatedAt = types.StringValue(raw.CreatedAt)
+	model.UpdatedAt = types.StringValue(raw.UpdatedAt)
 }

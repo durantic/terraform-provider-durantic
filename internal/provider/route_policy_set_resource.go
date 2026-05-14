@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	durantic "github.com/durantic/controlplane-client-go/durantic"
@@ -264,14 +265,33 @@ func (r *RoutePolicySetResource) Create(ctx context.Context, req resource.Create
 		Execute()
 
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Creating Route Policy Set",
-			fmt.Sprintf("Could not create route policy set, unexpected error: %s", extractAPIError(httpResp, err)),
-		)
-		return
+		if httpResp != nil && httpResp.StatusCode >= 300 {
+			resp.Diagnostics.AddError(
+				"Error Creating Route Policy Set",
+				fmt.Sprintf("Could not create route policy set, unexpected error: %s", extractAPIError(httpResp, err)),
+			)
+			return
+		}
+		if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+			var raw routePolicySetRaw
+			if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr != nil {
+				resp.Diagnostics.AddError(
+					"Error Creating Route Policy Set",
+					fmt.Sprintf("Could not parse route policy set response: %s", jsonErr),
+				)
+				return
+			}
+			mapRawToRoutePolicySetModel(&raw, &data)
+		} else {
+			resp.Diagnostics.AddError(
+				"Error Creating Route Policy Set",
+				fmt.Sprintf("Could not create route policy set, unexpected error: %s", extractAPIError(httpResp, err)),
+			)
+			return
+		}
+	} else {
+		mapRoutePolicySetToModel(policySet, &data)
 	}
-
-	mapRoutePolicySetToModel(policySet, &data)
 
 	createdRules := make([]RoutePolicyRuleModel, 0, len(data.Rules))
 	for _, ruleModel := range data.Rules {
@@ -282,20 +302,43 @@ func (r *RoutePolicySetResource) Create(ctx context.Context, req resource.Create
 		}
 
 		ruleResp, ruleHTTPResp, ruleErr := r.client.RoutePolicySetsAPI.
-			ControlplaneApiCreateRoutePolicyRule(ctx, policySet.GetUuid()).
+			ControlplaneApiCreateRoutePolicyRule(ctx, data.UUID.ValueString()).
 			CreateRoutePolicyRuleSchema(*ruleReq).
 			Execute()
 
+		var rm RoutePolicyRuleModel
 		if ruleErr != nil {
-			resp.Diagnostics.AddError(
-				"Error Creating Route Policy Rule",
-				fmt.Sprintf("Could not create rule for policy set %s: %s", policySet.GetUuid(), extractAPIError(ruleHTTPResp, ruleErr)),
-			)
-			return
+			if ruleHTTPResp != nil && ruleHTTPResp.StatusCode >= 300 {
+				resp.Diagnostics.AddError(
+					"Error Creating Route Policy Rule",
+					fmt.Sprintf("Could not create rule for policy set %s: %s", data.UUID.ValueString(), extractAPIError(ruleHTTPResp, ruleErr)),
+				)
+				return
+			}
+			if ruleAPIErr, ok := ruleErr.(*durantic.GenericOpenAPIError); ok {
+				var rawRule routePolicyRuleRaw
+				if jsonErr := json.Unmarshal(ruleAPIErr.Body(), &rawRule); jsonErr != nil {
+					resp.Diagnostics.AddError(
+						"Error Creating Route Policy Rule",
+						fmt.Sprintf("Could not parse rule response: %s", jsonErr),
+					)
+					return
+				}
+				var d diag.Diagnostics
+				rm, d = mapRawToRuleModel(ctx, &rawRule)
+				resp.Diagnostics.Append(d...)
+			} else {
+				resp.Diagnostics.AddError(
+					"Error Creating Route Policy Rule",
+					fmt.Sprintf("Could not create rule for policy set %s: %s", data.UUID.ValueString(), extractAPIError(ruleHTTPResp, ruleErr)),
+				)
+				return
+			}
+		} else {
+			var d diag.Diagnostics
+			rm, d = mapRuleAPIToModel(ctx, ruleResp)
+			resp.Diagnostics.Append(d...)
 		}
-
-		rm, diags := mapRuleAPIToModel(ctx, ruleResp)
-		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
@@ -325,7 +368,25 @@ func (r *RoutePolicySetResource) Read(ctx context.Context, req resource.ReadRequ
 			resp.State.RemoveResource(ctx)
 			return
 		}
-
+		if httpResp != nil && httpResp.StatusCode < 300 {
+			if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+				var raw routePolicySetRaw
+				if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr == nil {
+					mapRawToRoutePolicySetModel(&raw, &data)
+					ruleModels := make([]RoutePolicyRuleModel, 0, len(raw.Rules))
+					for i := range raw.Rules {
+						rm, d := mapRawToRuleModel(ctx, &raw.Rules[i])
+						resp.Diagnostics.Append(d...)
+						ruleModels = append(ruleModels, rm)
+					}
+					if !resp.Diagnostics.HasError() {
+						data.Rules = ruleModels
+						resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+					}
+					return
+				}
+			}
+		}
 		resp.Diagnostics.AddError(
 			"Error Reading Route Policy Set",
 			fmt.Sprintf("Could not read route policy set %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -378,14 +439,35 @@ func (r *RoutePolicySetResource) Update(ctx context.Context, req resource.Update
 		Execute()
 
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error Updating Route Policy Set",
-			fmt.Sprintf("Could not update route policy set %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
-		)
-		return
+		if httpResp != nil && httpResp.StatusCode < 300 {
+			if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+				var raw routePolicySetRaw
+				if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr == nil {
+					mapRawToRoutePolicySetModel(&raw, &data)
+				} else {
+					resp.Diagnostics.AddError(
+						"Error Updating Route Policy Set",
+						fmt.Sprintf("Could not parse route policy set response: %s", jsonErr),
+					)
+					return
+				}
+			} else {
+				resp.Diagnostics.AddError(
+					"Error Updating Route Policy Set",
+					fmt.Sprintf("Could not update route policy set %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
+				)
+				return
+			}
+		} else {
+			resp.Diagnostics.AddError(
+				"Error Updating Route Policy Set",
+				fmt.Sprintf("Could not update route policy set %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
+			)
+			return
+		}
+	} else {
+		mapRoutePolicySetToModel(policySet, &data)
 	}
-
-	mapRoutePolicySetToModel(policySet, &data)
 
 	// Build set of plan rule UUIDs (known, non-empty = existing rules to keep/update).
 	planUUIDs := make(map[string]struct{}, len(data.Rules))
@@ -429,16 +511,39 @@ func (r *RoutePolicySetResource) Update(ctx context.Context, req resource.Update
 				UpdateRoutePolicyRuleSchema(*updateRuleReq).
 				Execute()
 
+			var rm RoutePolicyRuleModel
 			if ruleErr != nil {
-				resp.Diagnostics.AddError(
-					"Error Updating Route Policy Rule",
-					fmt.Sprintf("Could not update rule %s: %s", pr.UUID.ValueString(), extractAPIError(ruleHTTPResp, ruleErr)),
-				)
-				return
+				if ruleHTTPResp != nil && ruleHTTPResp.StatusCode >= 300 {
+					resp.Diagnostics.AddError(
+						"Error Updating Route Policy Rule",
+						fmt.Sprintf("Could not update rule %s: %s", pr.UUID.ValueString(), extractAPIError(ruleHTTPResp, ruleErr)),
+					)
+					return
+				}
+				if ruleAPIErr, ok := ruleErr.(*durantic.GenericOpenAPIError); ok {
+					var rawRule routePolicyRuleRaw
+					if jsonErr := json.Unmarshal(ruleAPIErr.Body(), &rawRule); jsonErr != nil {
+						resp.Diagnostics.AddError(
+							"Error Updating Route Policy Rule",
+							fmt.Sprintf("Could not parse rule response: %s", jsonErr),
+						)
+						return
+					}
+					var d diag.Diagnostics
+					rm, d = mapRawToRuleModel(ctx, &rawRule)
+					resp.Diagnostics.Append(d...)
+				} else {
+					resp.Diagnostics.AddError(
+						"Error Updating Route Policy Rule",
+						fmt.Sprintf("Could not update rule %s: %s", pr.UUID.ValueString(), extractAPIError(ruleHTTPResp, ruleErr)),
+					)
+					return
+				}
+			} else {
+				var d diag.Diagnostics
+				rm, d = mapRuleAPIToModel(ctx, ruleResp)
+				resp.Diagnostics.Append(d...)
 			}
-
-			rm, diags := mapRuleAPIToModel(ctx, ruleResp)
-			resp.Diagnostics.Append(diags...)
 			if resp.Diagnostics.HasError() {
 				return
 			}
@@ -455,16 +560,39 @@ func (r *RoutePolicySetResource) Update(ctx context.Context, req resource.Update
 				CreateRoutePolicyRuleSchema(*createRuleReq).
 				Execute()
 
+			var rm RoutePolicyRuleModel
 			if ruleErr != nil {
-				resp.Diagnostics.AddError(
-					"Error Creating Route Policy Rule",
-					fmt.Sprintf("Could not create rule for policy set %s: %s", data.UUID.ValueString(), extractAPIError(ruleHTTPResp, ruleErr)),
-				)
-				return
+				if ruleHTTPResp != nil && ruleHTTPResp.StatusCode >= 300 {
+					resp.Diagnostics.AddError(
+						"Error Creating Route Policy Rule",
+						fmt.Sprintf("Could not create rule for policy set %s: %s", data.UUID.ValueString(), extractAPIError(ruleHTTPResp, ruleErr)),
+					)
+					return
+				}
+				if ruleAPIErr, ok := ruleErr.(*durantic.GenericOpenAPIError); ok {
+					var rawRule routePolicyRuleRaw
+					if jsonErr := json.Unmarshal(ruleAPIErr.Body(), &rawRule); jsonErr != nil {
+						resp.Diagnostics.AddError(
+							"Error Creating Route Policy Rule",
+							fmt.Sprintf("Could not parse rule response: %s", jsonErr),
+						)
+						return
+					}
+					var d diag.Diagnostics
+					rm, d = mapRawToRuleModel(ctx, &rawRule)
+					resp.Diagnostics.Append(d...)
+				} else {
+					resp.Diagnostics.AddError(
+						"Error Creating Route Policy Rule",
+						fmt.Sprintf("Could not create rule for policy set %s: %s", data.UUID.ValueString(), extractAPIError(ruleHTTPResp, ruleErr)),
+					)
+					return
+				}
+			} else {
+				var d diag.Diagnostics
+				rm, d = mapRuleAPIToModel(ctx, ruleResp)
+				resp.Diagnostics.Append(d...)
 			}
-
-			rm, diags := mapRuleAPIToModel(ctx, ruleResp)
-			resp.Diagnostics.Append(diags...)
 			if resp.Diagnostics.HasError() {
 				return
 			}
@@ -488,7 +616,7 @@ func (r *RoutePolicySetResource) Delete(ctx context.Context, req resource.Delete
 		ControlplaneApiDeleteRoutePolicySet(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			tflog.Trace(ctx, "route policy set already deleted")
 			return
@@ -721,6 +849,100 @@ func buildUpdateRuleRequest(ctx context.Context, model RoutePolicyRuleModel) (*d
 	}
 
 	return req, diags
+}
+
+type routePolicyRuleRaw struct {
+	UUID              string   `json:"uuid"`
+	Sequence          int32    `json:"sequence"`
+	Enabled           bool     `json:"enabled"`
+	Description       string   `json:"description"`
+	MatchType         string   `json:"match_type"`
+	MatchPrefixes     []string `json:"match_prefixes"`
+	MatchPrefixLenMin *int32   `json:"match_prefix_len_min"`
+	MatchPrefixLenMax *int32   `json:"match_prefix_len_max"`
+	MatchCommunities  []string `json:"match_communities"`
+	MatchAsPathRegex  string   `json:"match_as_path_regex"`
+	Action            string   `json:"action"`
+	SetLocalPref      *int32   `json:"set_local_pref"`
+	SetMed            *int32   `json:"set_med"`
+	SetCommunities    []string `json:"set_communities"`
+	AddCommunities    []string `json:"add_communities"`
+	RemoveCommunities []string `json:"remove_communities"`
+	PrependAsCount    int32    `json:"prepend_as_count"`
+}
+
+type routePolicySetRaw struct {
+	UUID          string               `json:"uuid"`
+	Name          string               `json:"name"`
+	Description   string               `json:"description"`
+	DefaultAction string               `json:"default_action"`
+	LocalPref     *int32               `json:"local_pref"`
+	AdvancedMode  bool                 `json:"advanced_mode"`
+	Rules         []routePolicyRuleRaw `json:"rules"`
+	CreatedAt     string               `json:"created_at"`
+	UpdatedAt     string               `json:"updated_at"`
+}
+
+func mapRawToRoutePolicySetModel(raw *routePolicySetRaw, model *RoutePolicySetResourceModel) {
+	model.UUID = types.StringValue(raw.UUID)
+	model.Name = types.StringValue(raw.Name)
+	model.Description = types.StringValue(raw.Description)
+	model.DefaultAction = types.StringValue(raw.DefaultAction)
+	model.AdvancedMode = types.BoolValue(raw.AdvancedMode)
+	model.CreatedAt = types.StringValue(raw.CreatedAt)
+	model.UpdatedAt = types.StringValue(raw.UpdatedAt)
+
+	if raw.LocalPref != nil {
+		model.LocalPref = types.Int64Value(int64(*raw.LocalPref))
+	} else {
+		model.LocalPref = types.Int64Null()
+	}
+}
+
+func mapRawToRuleModel(ctx context.Context, raw *routePolicyRuleRaw) (RoutePolicyRuleModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	var model RoutePolicyRuleModel
+
+	model.UUID = types.StringValue(raw.UUID)
+	model.Sequence = types.Int64Value(int64(raw.Sequence))
+	model.Enabled = types.BoolValue(raw.Enabled)
+	model.Description = types.StringValue(raw.Description)
+	model.MatchType = types.StringValue(raw.MatchType)
+	model.MatchAsPathRegex = types.StringValue(raw.MatchAsPathRegex)
+	model.Action = types.StringValue(raw.Action)
+	model.PrependAsCount = types.Int64Value(int64(raw.PrependAsCount))
+
+	if raw.MatchPrefixLenMin != nil {
+		model.MatchPrefixLenMin = types.Int64Value(int64(*raw.MatchPrefixLenMin))
+	} else {
+		model.MatchPrefixLenMin = types.Int64Null()
+	}
+
+	if raw.MatchPrefixLenMax != nil {
+		model.MatchPrefixLenMax = types.Int64Value(int64(*raw.MatchPrefixLenMax))
+	} else {
+		model.MatchPrefixLenMax = types.Int64Null()
+	}
+
+	if raw.SetLocalPref != nil {
+		model.SetLocalPref = types.Int64Value(int64(*raw.SetLocalPref))
+	} else {
+		model.SetLocalPref = types.Int64Null()
+	}
+
+	if raw.SetMed != nil {
+		model.SetMed = types.Int64Value(int64(*raw.SetMed))
+	} else {
+		model.SetMed = types.Int64Null()
+	}
+
+	model.MatchPrefixes = listFromStrings(ctx, raw.MatchPrefixes, &diags)
+	model.MatchCommunities = listFromStrings(ctx, raw.MatchCommunities, &diags)
+	model.SetCommunities = listFromStrings(ctx, raw.SetCommunities, &diags)
+	model.AddCommunities = listFromStrings(ctx, raw.AddCommunities, &diags)
+	model.RemoveCommunities = listFromStrings(ctx, raw.RemoveCommunities, &diags)
+
+	return model, diags
 }
 
 // listFromStrings maps an API []string to a Terraform types.List.

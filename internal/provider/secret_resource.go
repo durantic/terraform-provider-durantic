@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	durantic "github.com/durantic/controlplane-client-go/durantic"
@@ -118,6 +119,29 @@ func (r *SecretResource) Create(ctx context.Context, req resource.CreateRequest,
 		Execute()
 
 	if err != nil {
+		if httpResp != nil && httpResp.StatusCode >= 300 {
+			resp.Diagnostics.AddError(
+				"Error Creating Secret",
+				fmt.Sprintf("Could not create secret, unexpected error: %s", extractAPIError(httpResp, err)),
+			)
+			return
+		}
+		if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+			var raw accountSecretRaw
+			if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr != nil {
+				resp.Diagnostics.AddError(
+					"Error Creating Secret",
+					fmt.Sprintf("Could not parse secret response: %s", jsonErr),
+				)
+				return
+			}
+			value := data.Value
+			mapRawToSecretModel(&raw, &data)
+			data.Value = value
+			tflog.Trace(ctx, "created secret")
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error Creating Secret",
 			fmt.Sprintf("Could not create secret, unexpected error: %s", extractAPIError(httpResp, err)),
@@ -152,7 +176,18 @@ func (r *SecretResource) Read(ctx context.Context, req resource.ReadRequest, res
 			resp.State.RemoveResource(ctx)
 			return
 		}
-
+		if httpResp != nil && httpResp.StatusCode < 300 {
+			if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+				var raw accountSecretRaw
+				if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr == nil {
+					value := data.Value
+					mapRawToSecretModel(&raw, &data)
+					data.Value = value
+					resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+					return
+				}
+			}
+		}
 		resp.Diagnostics.AddError(
 			"Error Reading Secret",
 			fmt.Sprintf("Could not read secret %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -187,6 +222,18 @@ func (r *SecretResource) Update(ctx context.Context, req resource.UpdateRequest,
 		Execute()
 
 	if err != nil {
+		if httpResp != nil && httpResp.StatusCode < 300 {
+			if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+				var raw accountSecretRaw
+				if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr == nil {
+					value := data.Value
+					mapRawToSecretModel(&raw, &data)
+					data.Value = value
+					resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+					return
+				}
+			}
+		}
 		resp.Diagnostics.AddError(
 			"Error Updating Secret",
 			fmt.Sprintf("Could not update secret %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -214,7 +261,7 @@ func (r *SecretResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		ControlplaneApiDeleteAccountSecret(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil {
+	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			tflog.Trace(ctx, "secret already deleted")
 			return
@@ -232,6 +279,22 @@ func (r *SecretResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 func (r *SecretResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("uuid"), req, resp)
+}
+
+type accountSecretRaw struct {
+	UUID        string `json:"uuid"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
+}
+
+func mapRawToSecretModel(raw *accountSecretRaw, model *SecretResourceModel) {
+	model.UUID = types.StringValue(raw.UUID)
+	model.Name = types.StringValue(raw.Name)
+	model.Description = types.StringValue(raw.Description)
+	model.CreatedAt = types.StringValue(raw.CreatedAt)
+	model.UpdatedAt = types.StringValue(raw.UpdatedAt)
 }
 
 func mapSecretToModel(s *durantic.AccountSecretSchema, model *SecretResourceModel) {
