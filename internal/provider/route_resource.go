@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	durantic "github.com/durantic/controlplane-client-go/durantic"
@@ -144,7 +145,31 @@ func (r *RouteResource) Create(ctx context.Context, req resource.CreateRequest, 
 		CreateRouteSchema(*createReq).
 		Execute()
 
-	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
+	if err != nil {
+		if httpResp != nil && httpResp.StatusCode >= 300 {
+			resp.Diagnostics.AddError(
+				"Error Creating Route",
+				fmt.Sprintf("Could not create route, unexpected error: %s", extractAPIError(httpResp, err)),
+			)
+			return
+		}
+		if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+			var raw routeRaw
+			if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr != nil {
+				resp.Diagnostics.AddError(
+					"Error Creating Route",
+					fmt.Sprintf("Could not parse route response: %s", jsonErr),
+				)
+				return
+			}
+			resp.Diagnostics.Append(mapRawToRouteModel(ctx, &raw, &data)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			tflog.Trace(ctx, "created route")
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error Creating Route",
 			fmt.Sprintf("Could not create route, unexpected error: %s", extractAPIError(httpResp, err)),
@@ -174,12 +199,23 @@ func (r *RouteResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		ControlplaneApiGetRoute(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
+	if err != nil {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-
+		if httpResp != nil && httpResp.StatusCode < 300 {
+			if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+				var raw routeRaw
+				if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr == nil {
+					resp.Diagnostics.Append(mapRawToRouteModel(ctx, &raw, &data)...)
+					if !resp.Diagnostics.HasError() {
+						resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+					}
+					return
+				}
+			}
+		}
 		resp.Diagnostics.AddError(
 			"Error Reading Route",
 			fmt.Sprintf("Could not read route %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -230,7 +266,19 @@ func (r *RouteResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		UpdateRouteSchema(*updateReq).
 		Execute()
 
-	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
+	if err != nil {
+		if httpResp != nil && httpResp.StatusCode < 300 {
+			if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+				var raw routeRaw
+				if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr == nil {
+					resp.Diagnostics.Append(mapRawToRouteModel(ctx, &raw, &data)...)
+					if !resp.Diagnostics.HasError() {
+						resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+					}
+					return
+				}
+			}
+		}
 		resp.Diagnostics.AddError(
 			"Error Updating Route",
 			fmt.Sprintf("Could not update route %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -276,6 +324,33 @@ func (r *RouteResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 
 func (r *RouteResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("uuid"), req, resp)
+}
+
+type routeRaw struct {
+	UUID         string   `json:"uuid"`
+	Name         string   `json:"name"`
+	Enabled      bool     `json:"enabled"`
+	Prefixes     []string `json:"prefixes"`
+	MachineCount int32    `json:"machine_count"`
+	CreatedAt    string   `json:"created_at"`
+	UpdatedAt    string   `json:"updated_at"`
+}
+
+func mapRawToRouteModel(ctx context.Context, raw *routeRaw, model *RouteResourceModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	model.UUID = types.StringValue(raw.UUID)
+	model.Name = types.StringValue(raw.Name)
+	model.Enabled = types.BoolValue(raw.Enabled)
+	model.MachineCount = types.Int64Value(int64(raw.MachineCount))
+	model.CreatedAt = types.StringValue(raw.CreatedAt)
+	model.UpdatedAt = types.StringValue(raw.UpdatedAt)
+
+	prefixList, d := types.ListValueFrom(ctx, types.StringType, raw.Prefixes)
+	diags.Append(d...)
+	model.Prefixes = prefixList
+
+	return diags
 }
 
 // mapRouteToModel maps an API RouteSchema to the Terraform model.

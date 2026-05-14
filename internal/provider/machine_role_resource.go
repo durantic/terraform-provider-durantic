@@ -387,24 +387,24 @@ func mapMachineRoleToModel(role *durantic.MachineRoleSchema, model *MachineRoleR
 // mapMachineRoleRaw is a tolerant JSON struct for parsing API responses
 // that may contain fields not yet in the generated client model.
 type mapMachineRoleRaw struct {
-	UUID              string `json:"uuid"`
-	Name              string `json:"name"`
-	MergePriority     int32  `json:"merge_priority"`
-	TemplateData      string `json:"template_data"`
-	Description       string `json:"description"`
-	Image             *struct {
+	UUID          string `json:"uuid"`
+	Name          string `json:"name"`
+	MergePriority int32  `json:"merge_priority"`
+	TemplateData  string `json:"template_data"`
+	Description   string `json:"description"`
+	Image         *struct {
 		UUID string `json:"uuid"`
 	} `json:"image"`
 	Vip *struct {
 		UUID string `json:"uuid"`
 	} `json:"vip"`
-	IsOfficial        bool   `json:"is_official"`
-	RequiresMesh      bool   `json:"requires_mesh"`
+	IsOfficial        bool    `json:"is_official"`
+	RequiresMesh      bool    `json:"requires_mesh"`
 	ForkedFromUUID    *string `json:"forked_from_uuid"`
 	RequiredImageName *string `json:"required_image_name"`
 	RequiredImageURL  *string `json:"required_image_url"`
-	CreatedAt         string `json:"created_at"`
-	UpdatedAt         string `json:"updated_at"`
+	CreatedAt         string  `json:"created_at"`
+	UpdatedAt         string  `json:"updated_at"`
 }
 
 func mapRawToMachineRoleModel(raw *mapMachineRoleRaw, model *MachineRoleResourceModel) {

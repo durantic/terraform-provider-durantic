@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	durantic "github.com/durantic/controlplane-client-go/durantic"
@@ -143,7 +144,28 @@ func (r *MeshNetworkResource) Create(ctx context.Context, req resource.CreateReq
 		CreateMeshNetworkSchema(*createReq).
 		Execute()
 
-	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
+	if err != nil {
+		if httpResp != nil && httpResp.StatusCode >= 300 {
+			resp.Diagnostics.AddError(
+				"Error Creating Mesh Network",
+				fmt.Sprintf("Could not create mesh network, unexpected error: %s", extractAPIError(httpResp, err)),
+			)
+			return
+		}
+		if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+			var raw meshNetworkRaw
+			if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr != nil {
+				resp.Diagnostics.AddError(
+					"Error Creating Mesh Network",
+					fmt.Sprintf("Could not parse mesh network response: %s", jsonErr),
+				)
+				return
+			}
+			mapRawToMeshNetworkModel(&raw, &data)
+			tflog.Trace(ctx, "created mesh network")
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error Creating Mesh Network",
 			fmt.Sprintf("Could not create mesh network, unexpected error: %s", extractAPIError(httpResp, err)),
@@ -171,12 +193,21 @@ func (r *MeshNetworkResource) Read(ctx context.Context, req resource.ReadRequest
 		ControlplaneApiGetMeshNetwork(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
+	if err != nil {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-
+		if httpResp != nil && httpResp.StatusCode < 300 {
+			if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+				var raw meshNetworkRaw
+				if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr == nil {
+					mapRawToMeshNetworkModel(&raw, &data)
+					resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+					return
+				}
+			}
+		}
 		resp.Diagnostics.AddError(
 			"Error Reading Mesh Network",
 			fmt.Sprintf("Could not read mesh network %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -208,7 +239,17 @@ func (r *MeshNetworkResource) Update(ctx context.Context, req resource.UpdateReq
 		UpdateMeshNetworkSchema(*updateReq).
 		Execute()
 
-	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
+	if err != nil {
+		if httpResp != nil && httpResp.StatusCode < 300 {
+			if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+				var raw meshNetworkRaw
+				if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr == nil {
+					mapRawToMeshNetworkModel(&raw, &data)
+					resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+					return
+				}
+			}
+		}
 		resp.Diagnostics.AddError(
 			"Error Updating Mesh Network",
 			fmt.Sprintf("Could not update mesh network %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -252,6 +293,30 @@ func (r *MeshNetworkResource) Delete(ctx context.Context, req resource.DeleteReq
 
 func (r *MeshNetworkResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("uuid"), req, resp)
+}
+
+type meshNetworkRaw struct {
+	UUID               string `json:"uuid"`
+	Name               string `json:"name"`
+	NetworkCidr        string `json:"network_cidr"`
+	IsDefault          bool   `json:"is_default"`
+	RouteReflectorMode bool   `json:"route_reflector_mode"`
+	AvailableIpCount   int32  `json:"available_ip_count"`
+	MachineCount       int32  `json:"machine_count"`
+	CreatedAt          string `json:"created_at"`
+	UpdatedAt          string `json:"updated_at"`
+}
+
+func mapRawToMeshNetworkModel(raw *meshNetworkRaw, model *MeshNetworkResourceModel) {
+	model.UUID = types.StringValue(raw.UUID)
+	model.Name = types.StringValue(raw.Name)
+	model.NetworkCidr = types.StringValue(raw.NetworkCidr)
+	model.IsDefault = types.BoolValue(raw.IsDefault)
+	model.RouteReflectorMode = types.BoolValue(raw.RouteReflectorMode)
+	model.AvailableIpCount = types.Int64Value(int64(raw.AvailableIpCount))
+	model.MachineCount = types.Int64Value(int64(raw.MachineCount))
+	model.CreatedAt = types.StringValue(raw.CreatedAt)
+	model.UpdatedAt = types.StringValue(raw.UpdatedAt)
 }
 
 // Helper function to map API schema to Terraform model.

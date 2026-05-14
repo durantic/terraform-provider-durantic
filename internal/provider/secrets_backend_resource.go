@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	durantic "github.com/durantic/controlplane-client-go/durantic"
@@ -156,6 +157,30 @@ func (r *SecretsBackendResource) Create(ctx context.Context, req resource.Create
 		Execute()
 
 	if apiErr != nil {
+		if httpResp != nil && httpResp.StatusCode >= 300 {
+			resp.Diagnostics.AddError(
+				"Error Creating Secrets Backend",
+				fmt.Sprintf("Could not create secrets backend, unexpected error: %s", extractAPIError(httpResp, apiErr)),
+			)
+			return
+		}
+		if openAPIErr, ok := apiErr.(*durantic.GenericOpenAPIError); ok {
+			var raw secretsBackendRaw
+			if jsonErr := json.Unmarshal(openAPIErr.Body(), &raw); jsonErr != nil {
+				resp.Diagnostics.AddError(
+					"Error Creating Secrets Backend",
+					fmt.Sprintf("Could not parse secrets backend response: %s", jsonErr),
+				)
+				return
+			}
+			resp.Diagnostics.Append(mapRawToSecretsBackendModel(ctx, &raw, &data)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			tflog.Trace(ctx, "created secrets backend")
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error Creating Secrets Backend",
 			fmt.Sprintf("Could not create secrets backend, unexpected error: %s", extractAPIError(httpResp, apiErr)),
@@ -185,12 +210,23 @@ func (r *SecretsBackendResource) Read(ctx context.Context, req resource.ReadRequ
 		ControlplaneApiGetSecretsBackend(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
+	if err != nil {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-
+		if httpResp != nil && httpResp.StatusCode < 300 {
+			if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+				var raw secretsBackendRaw
+				if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr == nil {
+					resp.Diagnostics.Append(mapRawToSecretsBackendModel(ctx, &raw, &data)...)
+					if !resp.Diagnostics.HasError() {
+						resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+					}
+					return
+				}
+			}
+		}
 		resp.Diagnostics.AddError(
 			"Error Reading Secrets Backend",
 			fmt.Sprintf("Could not read secrets backend %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -246,7 +282,19 @@ func (r *SecretsBackendResource) Update(ctx context.Context, req resource.Update
 		UpdateSecretsBackendSchema(*updateReq).
 		Execute()
 
-	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
+	if err != nil {
+		if httpResp != nil && httpResp.StatusCode < 300 {
+			if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+				var raw secretsBackendRaw
+				if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr == nil {
+					resp.Diagnostics.Append(mapRawToSecretsBackendModel(ctx, &raw, &data)...)
+					if !resp.Diagnostics.HasError() {
+						resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+					}
+					return
+				}
+			}
+		}
 		resp.Diagnostics.AddError(
 			"Error Updating Secrets Backend",
 			fmt.Sprintf("Could not update secrets backend %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -292,6 +340,47 @@ func (r *SecretsBackendResource) Delete(ctx context.Context, req resource.Delete
 
 func (r *SecretsBackendResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("uuid"), req, resp)
+}
+
+type secretsBackendRaw struct {
+	UUID        string                 `json:"uuid"`
+	Name        string                 `json:"name"`
+	BackendType string                 `json:"backend_type"`
+	URL         string                 `json:"url"`
+	Config      map[string]interface{} `json:"config"`
+	CACert      string                 `json:"ca_cert"`
+	Enabled     bool                   `json:"enabled"`
+	CreatedAt   string                 `json:"created_at"`
+	UpdatedAt   string                 `json:"updated_at"`
+}
+
+func mapRawToSecretsBackendModel(ctx context.Context, raw *secretsBackendRaw, model *SecretsBackendResourceModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	model.UUID = types.StringValue(raw.UUID)
+	model.Name = types.StringValue(raw.Name)
+	model.BackendType = types.StringValue(raw.BackendType)
+	model.URL = types.StringValue(raw.URL)
+	model.CACert = types.StringValue(raw.CACert)
+	model.Enabled = types.BoolValue(raw.Enabled)
+	model.CreatedAt = types.StringValue(raw.CreatedAt)
+	model.UpdatedAt = types.StringValue(raw.UpdatedAt)
+
+	if len(raw.Config) == 0 {
+		model.Config = types.MapNull(types.StringType)
+	} else {
+		stringConfig := make(map[string]string, len(raw.Config))
+		for k, v := range raw.Config {
+			if s, ok := v.(string); ok {
+				stringConfig[k] = s
+			}
+		}
+		configMap, d := types.MapValueFrom(ctx, types.StringType, stringConfig)
+		diags.Append(d...)
+		model.Config = configMap
+	}
+
+	return diags
 }
 
 // configMapToAPI converts a Terraform types.Map (string values) to map[string]interface{} for the API.

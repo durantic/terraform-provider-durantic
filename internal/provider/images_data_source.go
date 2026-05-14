@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	durantic "github.com/durantic/controlplane-client-go/durantic"
@@ -126,7 +127,30 @@ func (d *ImagesDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 
 	images, httpResp, err := d.client.ImagesAPI.ProvisioningApiListImages(ctx).Execute()
-	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
+	if err != nil {
+		if httpResp != nil && httpResp.StatusCode >= 300 {
+			resp.Diagnostics.AddError(
+				"Error Listing Images",
+				fmt.Sprintf("Could not list images: %s", extractAPIError(httpResp, err)),
+			)
+			return
+		}
+		if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+			var rawImages []imageRaw
+			if jsonErr := json.Unmarshal(apiErr.Body(), &rawImages); jsonErr != nil {
+				resp.Diagnostics.AddError(
+					"Error Listing Images",
+					fmt.Sprintf("Could not parse images response: %s", jsonErr),
+				)
+				return
+			}
+			data.Images = make([]ImageDataSourceModel, len(rawImages))
+			for i := range rawImages {
+				data.Images[i] = mapRawToImageDataSourceModel(&rawImages[i])
+			}
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error Listing Images",
 			fmt.Sprintf("Could not list images: %s", extractAPIError(httpResp, err)),
@@ -140,6 +164,54 @@ func (d *ImagesDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+type imageRaw struct {
+	UUID                   string  `json:"uuid"`
+	Name                   string  `json:"name"`
+	DockerImageURL         string  `json:"docker_image_url"`
+	RegistryCredentialUUID *string `json:"registry_credential_uuid,omitempty"`
+	RegistryCredentialName *string `json:"registry_credential_name,omitempty"`
+	IsOfficial             *bool   `json:"is_official,omitempty"`
+	Description            *string `json:"description,omitempty"`
+	CreatedAt              string  `json:"created_at"`
+	UpdatedAt              string  `json:"updated_at"`
+}
+
+func mapRawToImageDataSourceModel(raw *imageRaw) ImageDataSourceModel {
+	m := ImageDataSourceModel{
+		UUID:           types.StringValue(raw.UUID),
+		Name:           types.StringValue(raw.Name),
+		DockerImageURL: types.StringValue(raw.DockerImageURL),
+		CreatedAt:      types.StringValue(raw.CreatedAt),
+		UpdatedAt:      types.StringValue(raw.UpdatedAt),
+	}
+
+	if raw.RegistryCredentialUUID != nil {
+		m.RegistryCredentialUUID = types.StringValue(*raw.RegistryCredentialUUID)
+	} else {
+		m.RegistryCredentialUUID = types.StringNull()
+	}
+
+	if raw.RegistryCredentialName != nil {
+		m.RegistryCredentialName = types.StringValue(*raw.RegistryCredentialName)
+	} else {
+		m.RegistryCredentialName = types.StringNull()
+	}
+
+	if raw.IsOfficial != nil {
+		m.IsOfficial = types.BoolValue(*raw.IsOfficial)
+	} else {
+		m.IsOfficial = types.BoolValue(false)
+	}
+
+	if raw.Description != nil {
+		m.Description = types.StringValue(*raw.Description)
+	} else {
+		m.Description = types.StringNull()
+	}
+
+	return m
 }
 
 func mapImageToDataSourceModel(img *durantic.ImageSchema) ImageDataSourceModel {

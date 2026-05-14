@@ -5,10 +5,10 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	durantic "github.com/durantic/controlplane-client-go/durantic"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -33,21 +33,21 @@ type VIPResource struct {
 }
 
 type VIPResourceModel struct {
-	UUID                         types.String `tfsdk:"uuid"`
-	Name                         types.String `tfsdk:"name"`
-	Enabled                      types.Bool   `tfsdk:"enabled"`
-	Address                      types.String `tfsdk:"address"`
-	HealthCheckType              types.String `tfsdk:"health_check_type"`
-	HealthCheckTarget            types.String `tfsdk:"health_check_target"`
-	HealthCheckIntervalSeconds   types.Int64  `tfsdk:"health_check_interval_seconds"`
-	HealthCheckTimeoutSeconds    types.Int64  `tfsdk:"health_check_timeout_seconds"`
-	HealthCheckHealthyThreshold  types.Int64  `tfsdk:"health_check_healthy_threshold"`
-	HealthCheckUnhealthyThreshold types.Int64 `tfsdk:"health_check_unhealthy_threshold"`
-	HealthCheckHoldoffSeconds    types.Int64  `tfsdk:"health_check_holdoff_seconds"`
-	MachineUUIDs                 types.List   `tfsdk:"machine_uuids"`
-	MachineCount                 types.Int64  `tfsdk:"machine_count"`
-	CreatedAt                    types.String `tfsdk:"created_at"`
-	UpdatedAt                    types.String `tfsdk:"updated_at"`
+	UUID                          types.String `tfsdk:"uuid"`
+	Name                          types.String `tfsdk:"name"`
+	Enabled                       types.Bool   `tfsdk:"enabled"`
+	Address                       types.String `tfsdk:"address"`
+	HealthCheckType               types.String `tfsdk:"health_check_type"`
+	HealthCheckTarget             types.String `tfsdk:"health_check_target"`
+	HealthCheckIntervalSeconds    types.Int64  `tfsdk:"health_check_interval_seconds"`
+	HealthCheckTimeoutSeconds     types.Int64  `tfsdk:"health_check_timeout_seconds"`
+	HealthCheckHealthyThreshold   types.Int64  `tfsdk:"health_check_healthy_threshold"`
+	HealthCheckUnhealthyThreshold types.Int64  `tfsdk:"health_check_unhealthy_threshold"`
+	HealthCheckHoldoffSeconds     types.Int64  `tfsdk:"health_check_holdoff_seconds"`
+	MachineUUIDs                  types.List   `tfsdk:"machine_uuids"`
+	MachineCount                  types.Int64  `tfsdk:"machine_count"`
+	CreatedAt                     types.String `tfsdk:"created_at"`
+	UpdatedAt                     types.String `tfsdk:"updated_at"`
 }
 
 func (r *VIPResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -195,7 +195,28 @@ func (r *VIPResource) Create(ctx context.Context, req resource.CreateRequest, re
 		CreateVIPSchema(*createReq).
 		Execute()
 
-	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
+	if err != nil {
+		if httpResp != nil && httpResp.StatusCode >= 300 {
+			resp.Diagnostics.AddError(
+				"Error Creating VIP",
+				fmt.Sprintf("Could not create VIP, unexpected error: %s", extractAPIError(httpResp, err)),
+			)
+			return
+		}
+		if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+			var raw vipRaw
+			if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr != nil {
+				resp.Diagnostics.AddError(
+					"Error Creating VIP",
+					fmt.Sprintf("Could not parse VIP response: %s", jsonErr),
+				)
+				return
+			}
+			mapRawToVIPModel(&raw, &data)
+			tflog.Trace(ctx, "created VIP")
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error Creating VIP",
 			fmt.Sprintf("Could not create VIP, unexpected error: %s", extractAPIError(httpResp, err)),
@@ -203,10 +224,7 @@ func (r *VIPResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	resp.Diagnostics.Append(mapVIPToModel(vip, &data)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	mapVIPToModel(vip, &data)
 
 	tflog.Trace(ctx, "created VIP")
 
@@ -225,12 +243,21 @@ func (r *VIPResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		ControlplaneApiGetVip(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
+	if err != nil {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-
+		if httpResp != nil && httpResp.StatusCode < 300 {
+			if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+				var raw vipRaw
+				if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr == nil {
+					mapRawToVIPModel(&raw, &data)
+					resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+					return
+				}
+			}
+		}
 		resp.Diagnostics.AddError(
 			"Error Reading VIP",
 			fmt.Sprintf("Could not read VIP %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -238,10 +265,7 @@ func (r *VIPResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
-	resp.Diagnostics.Append(mapVIPToModel(vip, &data)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	mapVIPToModel(vip, &data)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -282,7 +306,17 @@ func (r *VIPResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		UpdateVIPSchema(*updateReq).
 		Execute()
 
-	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
+	if err != nil {
+		if httpResp != nil && httpResp.StatusCode < 300 {
+			if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+				var raw vipRaw
+				if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr == nil {
+					mapRawToVIPModel(&raw, &data)
+					resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+					return
+				}
+			}
+		}
 		resp.Diagnostics.AddError(
 			"Error Updating VIP",
 			fmt.Sprintf("Could not update VIP %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -290,10 +324,7 @@ func (r *VIPResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 
-	resp.Diagnostics.Append(mapVIPToModel(vip, &data)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	mapVIPToModel(vip, &data)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -330,12 +361,48 @@ func (r *VIPResource) ImportState(ctx context.Context, req resource.ImportStateR
 	resource.ImportStatePassthroughID(ctx, path.Root("uuid"), req, resp)
 }
 
+type vipRaw struct {
+	UUID                          string  `json:"uuid"`
+	Name                          string  `json:"name"`
+	Enabled                       bool    `json:"enabled"`
+	Address                       *string `json:"address,omitempty"`
+	HealthCheckType               string  `json:"health_check_type"`
+	HealthCheckTarget             string  `json:"health_check_target"`
+	HealthCheckIntervalSeconds    int32   `json:"health_check_interval_seconds"`
+	HealthCheckTimeoutSeconds     int32   `json:"health_check_timeout_seconds"`
+	HealthCheckHealthyThreshold   int32   `json:"health_check_healthy_threshold"`
+	HealthCheckUnhealthyThreshold int32   `json:"health_check_unhealthy_threshold"`
+	HealthCheckHoldoffSeconds     int32   `json:"health_check_holdoff_seconds"`
+	MachineCount                  int32   `json:"machine_count"`
+	CreatedAt                     string  `json:"created_at"`
+	UpdatedAt                     string  `json:"updated_at"`
+}
+
+func mapRawToVIPModel(raw *vipRaw, model *VIPResourceModel) {
+	model.UUID = types.StringValue(raw.UUID)
+	model.Name = types.StringValue(raw.Name)
+	model.Enabled = types.BoolValue(raw.Enabled)
+	model.MachineCount = types.Int64Value(int64(raw.MachineCount))
+	model.CreatedAt = types.StringValue(raw.CreatedAt)
+	model.UpdatedAt = types.StringValue(raw.UpdatedAt)
+
+	if raw.Address != nil {
+		model.Address = types.StringValue(*raw.Address)
+	}
+
+	model.HealthCheckType = types.StringValue(raw.HealthCheckType)
+	model.HealthCheckTarget = types.StringValue(raw.HealthCheckTarget)
+	model.HealthCheckIntervalSeconds = types.Int64Value(int64(raw.HealthCheckIntervalSeconds))
+	model.HealthCheckTimeoutSeconds = types.Int64Value(int64(raw.HealthCheckTimeoutSeconds))
+	model.HealthCheckHealthyThreshold = types.Int64Value(int64(raw.HealthCheckHealthyThreshold))
+	model.HealthCheckUnhealthyThreshold = types.Int64Value(int64(raw.HealthCheckUnhealthyThreshold))
+	model.HealthCheckHoldoffSeconds = types.Int64Value(int64(raw.HealthCheckHoldoffSeconds))
+}
+
 // mapVIPToModel maps an API VIPSchema to the Terraform model.
 // machine_uuids is not updated here because the response returns machines as full objects
 // rather than UUIDs; the write-only machine_uuids field retains its state value.
-func mapVIPToModel(vip *durantic.VIPSchema, model *VIPResourceModel) diag.Diagnostics {
-	var diags diag.Diagnostics
-
+func mapVIPToModel(vip *durantic.VIPSchema, model *VIPResourceModel) {
 	model.UUID = types.StringValue(vip.GetUuid())
 	model.Name = types.StringValue(vip.GetName())
 	model.Enabled = types.BoolValue(vip.GetEnabled())
@@ -354,6 +421,4 @@ func mapVIPToModel(vip *durantic.VIPSchema, model *VIPResourceModel) diag.Diagno
 	model.HealthCheckHealthyThreshold = types.Int64Value(int64(vip.GetHealthCheckHealthyThreshold()))
 	model.HealthCheckUnhealthyThreshold = types.Int64Value(int64(vip.GetHealthCheckUnhealthyThreshold()))
 	model.HealthCheckHoldoffSeconds = types.Int64Value(int64(vip.GetHealthCheckHoldoffSeconds()))
-
-	return diags
 }

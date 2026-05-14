@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	durantic "github.com/durantic/controlplane-client-go/durantic"
@@ -137,7 +138,30 @@ func (r *RegistryCredentialResource) Create(ctx context.Context, req resource.Cr
 		CreateRegistryCredentialSchema(*createReq).
 		Execute()
 
-	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
+	if err != nil {
+		if httpResp != nil && httpResp.StatusCode >= 300 {
+			resp.Diagnostics.AddError(
+				"Error Creating Registry Credential",
+				fmt.Sprintf("Could not create registry credential, unexpected error: %s", extractAPIError(httpResp, err)),
+			)
+			return
+		}
+		if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+			var raw registryCredentialRaw
+			if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr != nil {
+				resp.Diagnostics.AddError(
+					"Error Creating Registry Credential",
+					fmt.Sprintf("Could not parse registry credential response: %s", jsonErr),
+				)
+				return
+			}
+			password := data.Password
+			mapRawToRegistryCredentialModel(&raw, &data)
+			data.Password = password
+			tflog.Trace(ctx, "created registry credential")
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error Creating Registry Credential",
 			fmt.Sprintf("Could not create registry credential, unexpected error: %s", extractAPIError(httpResp, err)),
@@ -167,12 +191,23 @@ func (r *RegistryCredentialResource) Read(ctx context.Context, req resource.Read
 		ProvisioningApiGetRegistryCredential(ctx, data.UUID.ValueString()).
 		Execute()
 
-	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
+	if err != nil {
 		if httpResp != nil && httpResp.StatusCode == 404 {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-
+		if httpResp != nil && httpResp.StatusCode < 300 {
+			if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+				var raw registryCredentialRaw
+				if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr == nil {
+					password := data.Password
+					mapRawToRegistryCredentialModel(&raw, &data)
+					data.Password = password
+					resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+					return
+				}
+			}
+		}
 		resp.Diagnostics.AddError(
 			"Error Reading Registry Credential",
 			fmt.Sprintf("Could not read registry credential %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -208,7 +243,19 @@ func (r *RegistryCredentialResource) Update(ctx context.Context, req resource.Up
 		UpdateRegistryCredentialSchema(*updateReq).
 		Execute()
 
-	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
+	if err != nil {
+		if httpResp != nil && httpResp.StatusCode < 300 {
+			if apiErr, ok := err.(*durantic.GenericOpenAPIError); ok {
+				var raw registryCredentialRaw
+				if jsonErr := json.Unmarshal(apiErr.Body(), &raw); jsonErr == nil {
+					password := data.Password
+					mapRawToRegistryCredentialModel(&raw, &data)
+					data.Password = password
+					resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+					return
+				}
+			}
+		}
 		resp.Diagnostics.AddError(
 			"Error Updating Registry Credential",
 			fmt.Sprintf("Could not update registry credential %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -254,6 +301,39 @@ func (r *RegistryCredentialResource) Delete(ctx context.Context, req resource.De
 
 func (r *RegistryCredentialResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("uuid"), req, resp)
+}
+
+type registryCredentialRaw struct {
+	UUID        string  `json:"uuid"`
+	Name        string  `json:"name"`
+	RegistryURL string  `json:"registry_url"`
+	Username    string  `json:"username"`
+	Description *string `json:"description,omitempty"`
+	ImageCount  *int32  `json:"image_count,omitempty"`
+	CreatedAt   string  `json:"created_at"`
+	UpdatedAt   string  `json:"updated_at"`
+}
+
+func mapRawToRegistryCredentialModel(raw *registryCredentialRaw, model *RegistryCredentialResourceModel) {
+	model.UUID = types.StringValue(raw.UUID)
+	model.Name = types.StringValue(raw.Name)
+	model.RegistryURL = types.StringValue(raw.RegistryURL)
+	model.Username = types.StringValue(raw.Username)
+
+	if raw.Description != nil {
+		model.Description = types.StringValue(*raw.Description)
+	} else {
+		model.Description = types.StringValue("")
+	}
+
+	if raw.ImageCount != nil {
+		model.ImageCount = types.Int64Value(int64(*raw.ImageCount))
+	} else {
+		model.ImageCount = types.Int64Value(0)
+	}
+
+	model.CreatedAt = types.StringValue(raw.CreatedAt)
+	model.UpdatedAt = types.StringValue(raw.UpdatedAt)
 }
 
 func mapRegistryCredentialToModel(c *durantic.RegistryCredentialSchema, model *RegistryCredentialResourceModel) {
