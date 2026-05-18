@@ -225,3 +225,13 @@ terraform plan
 6. Run `TF_ACC=1 go test -v ./internal/provider/` to verify.
 
 See `internal/provider/machine_role_resource.go` for a complete reference implementation.
+
+## TODO: Publishing to the Terraform Registry
+
+The following steps are required before the provider can be published to registry.terraform.io:
+
+- [ ] Rename the GitHub repo from `terraform-provider` to `terraform-provider-durantic` (Registry requirement for provider repos)
+- [ ] Make the repo public (registry.terraform.io only supports public repositories)
+- [ ] Generate a GPG key pair (`gpg --full-generate-key`), register the public key on registry.terraform.io, and add the private key + passphrase as `GPG_PRIVATE_KEY` and `PASSPHRASE` secrets in the GitHub repo
+- [ ] Sign in to registry.terraform.io with the `durantic` GitHub org, publish the provider via the UI — this sets up the webhook that makes the Registry watch for new releases
+- [ ] Push a `v*` tag to trigger the release workflow and publish the first version
