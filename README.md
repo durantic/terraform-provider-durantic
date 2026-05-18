@@ -63,12 +63,6 @@ The provider uses an OpenAPI-generated Go client:
 
 ### Contributor setup
 
-The module is consumed via a `replace` directive in `go.mod` that points to a local clone of `controlplane-client-go`. Contributors must clone that repository alongside this one and ensure the replace path is correct before building:
-
-```go
-replace github.com/durantic/controlplane-client-go/durantic => <path-to-your-local-clone>/durantic
-```
-
 ## Resources
 
 | Resource               | Description |
