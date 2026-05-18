@@ -82,11 +82,10 @@ jobs:
       GOPRIVATE: github.com/durantic/*
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         # list whatever Terraform versions here you would like to support
         terraform:
-          - '1.11.*'
-          - '1.12.*'
           - '1.13.*'
           - '1.14.*'
           - '1.15.*'
