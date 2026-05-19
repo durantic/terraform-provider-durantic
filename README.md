@@ -1,5 +1,7 @@
 # Terraform Provider for Durantic
 
+[![Tests](https://github.com/durantic/terraform-provider/actions/workflows/test.yml/badge.svg)](https://github.com/durantic/terraform-provider/actions/workflows/test.yml)
+
 A Terraform provider for managing [Durantic](https://durantic.io) infrastructure resources.
 
 **Registry address:** `registry.durantic.io/durantic/durantic` [WIP]
