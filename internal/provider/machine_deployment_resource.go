@@ -6,6 +6,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	durantic "github.com/durantic/controlplane-client-go/durantic"
@@ -23,15 +24,19 @@ import (
 const provisionPollInterval = 10 * time.Second
 const provisionTimeout = 15 * time.Minute
 
+// provisionDetailFetcher abstracts the API call inside pollProvision so it can be replaced in unit tests.
+type provisionDetailFetcher func(ctx context.Context, machineUUID, provisionUUID string) (*durantic.ProvisionDetailSchema, *http.Response, error)
+
 var _ resource.Resource = &MachineDeploymentResource{}
 var _ resource.ResourceWithImportState = &MachineDeploymentResource{}
 
 func NewMachineDeploymentResource() resource.Resource {
-	return &MachineDeploymentResource{}
+	return &MachineDeploymentResource{pollInterval: provisionPollInterval}
 }
 
 type MachineDeploymentResource struct {
-	client *durantic.APIClient
+	client       *durantic.APIClient
+	pollInterval time.Duration
 }
 
 type MachineDeploymentResourceModel struct {
@@ -253,7 +258,10 @@ func (r *MachineDeploymentResource) Create(ctx context.Context, req resource.Cre
 	pollCtx, cancel := context.WithTimeout(ctx, provisionTimeout)
 	defer cancel()
 
-	provisionStatus, diags := r.pollProvision(pollCtx, data.MachineUUID.ValueString(), provisionUUID)
+	fetcher := func(ctx context.Context, machineUUID, provisionUUID string) (*durantic.ProvisionDetailSchema, *http.Response, error) {
+		return r.client.MachinesAPI.ProvisioningApiGetMachineProvision(ctx, machineUUID, provisionUUID).Execute()
+	}
+	provisionStatus, diags := r.pollProvision(pollCtx, data.MachineUUID.ValueString(), provisionUUID, fetcher)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -344,7 +352,7 @@ func (r *MachineDeploymentResource) ImportState(ctx context.Context, req resourc
 
 // pollProvision polls the provision until it reaches a terminal state.
 // Returns the terminal status string, or an error diagnostic if the provision failed.
-func (r *MachineDeploymentResource) pollProvision(ctx context.Context, machineUUID, provisionUUID string) (string, diag.Diagnostics) {
+func (r *MachineDeploymentResource) pollProvision(ctx context.Context, machineUUID, provisionUUID string, fetch provisionDetailFetcher) (string, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	for {
@@ -355,12 +363,10 @@ func (r *MachineDeploymentResource) pollProvision(ctx context.Context, machineUU
 				fmt.Sprintf("Provision %s for machine %s did not reach a terminal state within %s.", provisionUUID, machineUUID, provisionTimeout),
 			)
 			return "", diags
-		case <-time.After(provisionPollInterval):
+		case <-time.After(r.pollInterval):
 		}
 
-		detail, httpResp, err := r.client.MachinesAPI.
-			ProvisioningApiGetMachineProvision(ctx, machineUUID, provisionUUID).
-			Execute()
+		detail, httpResp, err := fetch(ctx, machineUUID, provisionUUID)
 		if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 			diags.AddError(
 				"Error Polling Provision Status",

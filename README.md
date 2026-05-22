@@ -235,6 +235,18 @@ terraform plan
 
 See `internal/provider/machine_role_resource.go` for a complete reference implementation.
 
+## TODO: Wire acceptance tests in CI
+
+Acceptance tests for resources that require real infrastructure (e.g. `durantic_machine_deployment`) are currently skipped in CI because the required secrets are not configured. To enable them:
+
+- [ ] Add `DURANTIC_TEST_MACHINE_DEPLOYMENT_UUID` — UUID of a dedicated test machine
+- [ ] Add `DURANTIC_TEST_MACHINE_DEPLOYMENT_MESH_NETWORK_UUID` — UUID of a mesh network to assign
+- [ ] Add `DURANTIC_TEST_MACHINE_DEPLOYMENT_MESH_NETWORK_UUID2` — a second mesh network UUID (for the update-without-reprovision test step)
+- [ ] Add `DURANTIC_TEST_MACHINE_DEPLOYMENT_ROLE_NAMES` — comma-separated role names (roles must exist in the test environment)
+- [ ] Pass these secrets to the acceptance test jobs in `.github/workflows/test.yml`
+
+Unit tests (`TestPollProvision_*`) require no secrets and already run on every push via `make test`.
+
 ## TODO: Publishing to the Terraform Registry
 
 The following steps are required before the provider can be published to registry.terraform.io:
