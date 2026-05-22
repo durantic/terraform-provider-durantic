@@ -164,7 +164,7 @@ func (r *MachineConfigResource) Create(ctx context.Context, req resource.CreateR
 
 	updated, httpResp, err := r.client.MachinesAPI.
 		ProvisioningApiUpdateMachine(ctx, data.MachineUUID.ValueString()).
-		MachineUpdateSchema(buildMachineUpdateRequest(ctx, &data, &resp.Diagnostics)).
+		MachineUpdateSchema(buildMachineUpdateRequest(ctx, &data.MachineCommonModel, &resp.Diagnostics)).
 		Execute()
 	if resp.Diagnostics.HasError() {
 		return
@@ -222,7 +222,7 @@ func (r *MachineConfigResource) Update(ctx context.Context, req resource.UpdateR
 
 	updated, httpResp, err := r.client.MachinesAPI.
 		ProvisioningApiUpdateMachine(ctx, data.MachineUUID.ValueString()).
-		MachineUpdateSchema(buildMachineUpdateRequest(ctx, &data, &resp.Diagnostics)).
+		MachineUpdateSchema(buildMachineUpdateRequest(ctx, &data.MachineCommonModel, &resp.Diagnostics)).
 		Execute()
 	if resp.Diagnostics.HasError() {
 		return
@@ -248,7 +248,7 @@ func (r *MachineConfigResource) ImportState(ctx context.Context, req resource.Im
 	resource.ImportStatePassthroughID(ctx, path.Root("machine_uuid"), req, resp)
 }
 
-func buildMachineUpdateRequest(ctx context.Context, data *MachineConfigResourceModel, diags *diag.Diagnostics) durantic.MachineUpdateSchema {
+func buildMachineUpdateRequest(ctx context.Context, data *MachineCommonModel, diags *diag.Diagnostics) durantic.MachineUpdateSchema {
 	updateReq := durantic.NewMachineUpdateSchema()
 
 	if isKnownString(data.MeshNetworkUUID) {

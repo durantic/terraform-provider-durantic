@@ -159,6 +159,7 @@ func (p *DuranticProvider) Resources(ctx context.Context) []func() resource.Reso
 	return []func() resource.Resource{
 		NewMachineRoleResource,
 		NewMachineConfigResource,
+		NewMachineDeploymentResource,
 		NewMeshNetworkResource,
 		NewRouteResource,
 		NewVIPResource,
