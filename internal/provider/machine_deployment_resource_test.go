@@ -44,7 +44,7 @@ func newTestDeploymentResource() *MachineDeploymentResource {
 	return &MachineDeploymentResource{pollInterval: time.Millisecond}
 }
 
-func boolPtr(b bool) *bool   { return &b }
+func boolPtr(b bool) *bool    { return &b }
 func strPtr(s string) *string { return &s }
 
 func makeDetail(status string, isTerminal bool, errMsg string) *durantic.ProvisionDetailSchema {
