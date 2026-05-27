@@ -45,6 +45,7 @@ type MachineCommonModel struct {
 
 type MachineDataSourceModel struct {
 	MachineCommonModel
+	NotFoundOk types.Bool `tfsdk:"not_found_ok"`
 }
 
 func (d *MachineDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -130,6 +131,10 @@ func (d *MachineDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 				MarkdownDescription: "Whether kexec installer is enabled for this machine.",
 				Computed:            true,
 			},
+			"not_found_ok": schema.BoolAttribute{
+				MarkdownDescription: "If `true` (default), the data source returns null values instead of erroring when the machine does not exist. Set to `false` to fail hard when the machine is missing.",
+				Optional:            true,
+			},
 		},
 	}
 }
@@ -173,6 +178,10 @@ func (d *MachineDataSource) Read(ctx context.Context, req datasource.ReadRequest
 			ProvisioningApiGetMachine(ctx, data.UUID.ValueString()).
 			Execute()
 		if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
+			if httpResp != nil && httpResp.StatusCode == 404 && notFoundOk(data.NotFoundOk) {
+				resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+				return
+			}
 			resp.Diagnostics.AddError(
 				"Error Reading Machine",
 				fmt.Sprintf("Could not read machine %s: %s", data.UUID.ValueString(), extractAPIError(httpResp, err)),
@@ -201,6 +210,10 @@ func (d *MachineDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 
 	if len(matches) == 0 {
+		if notFoundOk(data.NotFoundOk) {
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"No Machine Found",
 			fmt.Sprintf("Could not find a machine with hostname %q.", data.Hostname.ValueString()),
@@ -229,6 +242,11 @@ func (d *MachineDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	resp.Diagnostics.Append(mapMachineResponseToCommonModel(machine, &data.MachineCommonModel)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// notFoundOk returns true when the attribute is unset (null), making lenient behavior the default.
+func notFoundOk(v types.Bool) bool {
+	return v.IsNull() || v.ValueBool()
 }
 
 func countSetStrings(values ...types.String) int {
