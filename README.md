@@ -235,22 +235,6 @@ terraform plan
 
 See `internal/provider/machine_role_resource.go` for a complete reference implementation.
 
-## TODO: Fix concurrent role deletion crashes
-
-Deleting multiple machine roles in parallel (`terraform destroy` default) causes intermittent 500 errors in the controlplane. Workaround: `terraform destroy -parallelism=1`.
-
-The errors are likely caused by concurrent `DELETE /api/machine-roles/{uuid}` requests racing on machine-row updates: each deletion cascades through `MachineRoleItem` post-delete signals (individual `asave(cloud_init_validated=False)` per machine) and then calls `ainvalidate_machine_configs` (bulk `UPDATE` on `agent_config_hash`). When two deletions share the same affected machines and process them in different orders within overlapping transactions, PostgreSQL deadlocks on the machine rows.
-
-Root cause needs confirmation from Django server error logs — the `SynchronousOnlyOperation` variant was already fixed in controlplane (commit `33396eb5`). The current failure mode under parallel deletion is a deadlock.
-
-## TODO: Fix concurrent mesh IP allocation race
-
-When multiple `durantic_machine_deployment` resources are applied in parallel (the default), each triggers a concurrent `PATCH /api/provisioning/machines/{uuid}` to assign the machine to a mesh network. The controlplane's WireGuard IP allocator is not atomic — two concurrent requests can read the same next-available IP and both try to claim it, resulting in duplicate mesh IP assignments.
-
-**Workaround:** use `terraform apply -parallelism=1` to serialize machine assignments.
-
-**Proper fix:** the controlplane API mesh IP allocation must be made atomic (database-level row lock or SELECT FOR UPDATE inside the assignment transaction). This is a controlplane issue, not a provider issue — tracked here as a reminder since it affects provider usability.
-
 ## TODO: Wire acceptance tests in CI
 
 Acceptance tests for resources that require real infrastructure (e.g. `durantic_machine_deployment`) are currently skipped in CI because the required secrets are not configured. To enable them:
