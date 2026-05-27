@@ -235,12 +235,6 @@ terraform plan
 
 See `internal/provider/machine_role_resource.go` for a complete reference implementation.
 
-## TODO: Return provision UUID from the provision endpoint
-
-`POST /api/provisioning/machines/{uuid}/provision` currently returns `{"message", "hostname", "mode"}` — no provision UUID. As a workaround, the provider immediately calls `GET /api/provisioning/machines/{uuid}/provisions?limit=1` after triggering to retrieve the UUID of the just-created provision record.
-
-Once the controlplane returns the UUID in the provision response body, remove the extra list call in `machine_deployment_resource.go` (marked with a TODO comment).
-
 ## TODO: Fix concurrent role deletion crashes
 
 Deleting multiple machine roles in parallel (`terraform destroy` default) causes intermittent 500 errors in the controlplane. Workaround: `terraform destroy -parallelism=1`.
