@@ -227,11 +227,10 @@ func (r *MachineDeploymentResource) Create(ctx context.Context, req resource.Cre
 	data.UUID = data.MachineUUID
 
 	// Step 2: trigger provision (rebuild mode)
-	// TODO: the controlplane API does not yet return the provision UUID in the response body;
-	// once it does, parse it from provisionResp["uuid"] and remove the list call below.
 	provisionSchema := durantic.NewMachineProvisionSchema()
 	provisionSchema.SetMode("rebuild")
-	_, httpResp, err = r.client.MachinesAPI.
+	var provisionResp map[string]interface{}
+	provisionResp, httpResp, err = r.client.MachinesAPI.
 		ProvisioningApiProvisionMachine(ctx, data.MachineUUID.ValueString()).
 		MachineProvisionSchema(*provisionSchema).
 		Execute()
@@ -242,28 +241,7 @@ func (r *MachineDeploymentResource) Create(ctx context.Context, req resource.Cre
 		)
 		return
 	}
-
-	// Fetch the UUID of the provision just created — the trigger endpoint does not return it.
-	// The provision record is created before the API responds, so it is always present here.
-	provisions, httpResp, err := r.client.MachinesAPI.
-		ProvisioningApiListMachineProvisions(ctx, data.MachineUUID.ValueString()).
-		Limit(1).
-		Execute()
-	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
-		resp.Diagnostics.AddError(
-			"Error Fetching Provision UUID",
-			fmt.Sprintf("Provision was triggered but could not retrieve its UUID for machine %s: %s", data.MachineUUID.ValueString(), extractAPIError(httpResp, err)),
-		)
-		return
-	}
-	if len(provisions) == 0 {
-		resp.Diagnostics.AddError(
-			"Error Fetching Provision UUID",
-			fmt.Sprintf("Provision was triggered but no provision record found for machine %s", data.MachineUUID.ValueString()),
-		)
-		return
-	}
-	provisionUUID := provisions[0].Uuid
+	provisionUUID, _ := provisionResp["uuid"].(string)
 
 	data.ProvisionUUID = types.StringValue(provisionUUID)
 	tflog.Info(ctx, "provision triggered", map[string]any{
