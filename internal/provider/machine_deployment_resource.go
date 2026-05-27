@@ -241,7 +241,7 @@ func (r *MachineDeploymentResource) Create(ctx context.Context, req resource.Cre
 		)
 		return
 	}
-	provisionUUID, _ := provisionResp["uuid"].(string)
+	provisionUUID, _ := provisionResp["provision_uuid"].(string)
 
 	data.ProvisionUUID = types.StringValue(provisionUUID)
 	tflog.Info(ctx, "provision triggered", map[string]any{
