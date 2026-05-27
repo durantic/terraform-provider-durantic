@@ -229,9 +229,11 @@ func (r *MachineDeploymentResource) Create(ctx context.Context, req resource.Cre
 	// Step 2: trigger provision (rebuild mode)
 	// TODO: the controlplane API does not yet return the provision UUID in the response body;
 	// once it does, parse it from provisionResp["uuid"] and remove the list call below.
+	provisionSchema := durantic.NewMachineProvisionSchema()
+	provisionSchema.SetMode("rebuild")
 	_, httpResp, err = r.client.MachinesAPI.
 		ProvisioningApiProvisionMachine(ctx, data.MachineUUID.ValueString()).
-		MachineProvisionSchema(*durantic.NewMachineProvisionSchema()).
+		MachineProvisionSchema(*provisionSchema).
 		Execute()
 	if err != nil && (httpResp == nil || httpResp.StatusCode >= 300) {
 		resp.Diagnostics.AddError(
