@@ -23,10 +23,34 @@ func TestAccMachineDataSource_NotFound(t *testing.T) {
 			{
 				Config: `
 data "durantic_machine" "missing" {
-  hostname = "terraform-provider-missing-machine"
+  hostname     = "terraform-provider-missing-machine"
+  not_found_ok = false
 }
 `,
 				ExpectError: regexp.MustCompile("No Machine Found"),
+			},
+		},
+	})
+}
+
+func TestAccMachineDataSource_NotFoundOk(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+data "durantic_machine" "missing" {
+  hostname = "terraform-provider-missing-machine"
+}
+`,
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"data.durantic_machine.missing",
+						tfjsonpath.New("uuid"),
+						knownvalue.Null(),
+					),
+				},
 			},
 		},
 	})
