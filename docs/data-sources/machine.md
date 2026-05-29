@@ -36,6 +36,7 @@ output "gateway_mesh_ip" {
 ### Optional
 
 - `hostname` (String) Machine hostname. Set either `uuid` or `hostname`.
+- `not_found_ok` (Boolean) If `true` (default), the data source returns null values instead of erroring when the machine does not exist. Set to `false` to fail hard when the machine is missing.
 - `uuid` (String) Unique identifier for the machine. Set either `uuid` or `hostname`.
 
 ### Read-Only
