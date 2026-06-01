@@ -303,6 +303,19 @@ If a short-term bridge is needed before dynamic QEMU registration is wired into 
 - **Quick wins, infra-independent:** random-prefix helper, `CheckDestroy`, `durantic_route`/`durantic_vip` tests, and image data-source self-bootstrap.
 - **Infra-dependent:** repoint live-account acceptance from shared stage to the dev01 autotest account, then wire the Tier 3 e2e suite (`suite: terraform`, dev_overrides build, machine_deployment apply).
 
+## TODO: Version the Durantic OpenAPI contract
+
+The provider imports the generated Go client module (`github.com/durantic/controlplane-client-go/durantic`). That client is generated from the controlplane OpenAPI schema exposed by Django Ninja at `/api/openapi.json`. Today the effective schema version is indirect: the deployed controlplane version, the generated Go client module tag, and the provider release that pins that module. The API paths themselves are not versioned (`/api/provisioning/...`, not `/api/v1/provisioning/...`), and the Django Ninja API does not currently declare an explicit schema version.
+
+Before treating the Terraform provider as a stable public integration, make this contract explicit:
+
+- [ ] Set OpenAPI `info.version` in the controlplane `NinjaAPI(...)`, ideally from the controlplane release version
+- [ ] Export and store the generated OpenAPI JSON artifact for each controlplane release
+- [ ] Regenerate `controlplane-client-go` only from a known schema artifact, not from whichever `/api/openapi.json` happens to be deployed at generation time
+- [ ] Tag `controlplane-client-go` releases and pin the Terraform provider to those tags in `go.mod`
+- [ ] Add CI that detects schema/client drift when controlplane API schemas or routes change
+- [ ] Decide whether path versioning (`/api/v1/...`) is necessary, or document that `/api/` remains backward compatible for published provider versions
+
 ## TODO: Publishing to the Terraform Registry
 
 The following steps are required before the provider can be published to registry.terraform.io:
