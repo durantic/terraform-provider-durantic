@@ -235,17 +235,54 @@ terraform plan
 
 See `internal/provider/machine_role_resource.go` for a complete reference implementation.
 
-## TODO: Wire acceptance tests in CI
+## TODO: Terraform provider test strategy
 
-Acceptance tests for resources that require real infrastructure (e.g. `durantic_machine_deployment`) are currently skipped in CI because the required secrets are not configured. To enable them:
+The repository will be made public so the provider can be published on the Terraform Registry. We do not expect outside contributors immediately, so CI can remain optimized for Durantic-maintained branches and trusted release workflows. The important split is between tests that are safe to run without secrets and tests that mutate a live controlplane account.
 
-- [ ] Add `DURANTIC_TEST_MACHINE_DEPLOYMENT_UUID` — UUID of a dedicated test machine
-- [ ] Add `DURANTIC_TEST_MACHINE_DEPLOYMENT_MESH_NETWORK_UUID` — UUID of a mesh network to assign
-- [ ] Add `DURANTIC_TEST_MACHINE_DEPLOYMENT_MESH_NETWORK_UUID2` — a second mesh network UUID (for the update-without-reprovision test step)
-- [ ] Add `DURANTIC_TEST_MACHINE_DEPLOYMENT_ROLE_NAMES` — comma-separated role names (roles must exist in the test environment)
-- [ ] Pass these secrets to the acceptance test jobs in `.github/workflows/test.yml`
+### Tier 1: Static and unit CI
 
-Unit tests (`TestPollProvision_*`) require no secrets and already run on every push via `make test`.
+Run on every push and pull request without Durantic credentials:
+
+- [ ] Build the provider (`go build ./...`)
+- [ ] Run Go unit tests without `TF_ACC` (`go test ./...`)
+- [ ] Run formatting and lint checks (`gofmt`, `golangci-lint`)
+- [ ] Run docs/code generation (`make generate`) and fail on an unexpected git diff
+- [ ] Keep `TestPollProvision_*` in this tier; these tests mock provision polling and require no live infrastructure
+
+Before the repo is public, make sure dependencies needed by this tier are public or otherwise available without private GitHub credentials. In particular, the OpenAPI client module (`github.com/durantic/controlplane-client-go/durantic`) must not prevent a clean public build.
+
+### Tier 2: Provider acceptance CI
+
+Run on trusted Durantic branches, scheduled runs, and release candidates with a dedicated `terraform-provider-autotest` account:
+
+- [ ] Continue running Terraform Plugin Testing with `TF_ACC=1 go test -v -cover ./internal/provider/`
+- [ ] Use `DURANTIC_API_TOKEN` and `DURANTIC_ENDPOINT` for the target environment
+- [ ] Use stable public base-image URLs for image data source tests instead of static image UUID secrets. For example, `ghcr.io/durantic/linux-ubuntu-25.10:latest` should remain available across environments.
+- [ ] Refactor image data source acceptance tests so UUID/name lookups are derived from the image found by `docker_image_url`, rather than configured through `DURANTIC_TEST_IMAGE_UUID` or `DURANTIC_TEST_IMAGE_NAME`.
+- [ ] Do not require static machine fixture secrets for normal provider acceptance CI. A machine record is created by agent/QEMU registration, not ordinary API CRUD, so dynamically registered machines belong in the e2e tier.
+- [ ] If machine data source acceptance tests are kept in provider CI, run them on the self-hosted QEMU runner and create the machine during the test
+- [ ] Otherwise, keep only machine not-found behavior in provider CI and cover successful machine lookup in the Terraform e2e suite
+- [ ] Avoid static resource names in acceptance tests; add a shared random prefix helper so retries and overlapping runs do not collide
+- [ ] Add acceptance coverage for resources currently registered by the provider but missing tests, especially `durantic_route` and `durantic_vip`
+- [ ] Keep Terraform CLI version matrix coverage for scheduled/release workflows; use a single current Terraform version for ordinary trusted branch CI
+
+### Tier 3: Provisioning e2e CI
+
+Use the existing `e2e/` harness for tests that need QEMU/KVM and a real provisioning flow:
+
+- [ ] Add `pytest.mark.terraform` tests in `e2e/` for provider-driven flows
+- [ ] Build the provider from the terraform-provider ref under test and expose it to Terraform via a CLI `dev_overrides` config
+- [ ] Prefer dynamically registered QEMU machines from the e2e fixture over long-lived static machine UUIDs
+- [ ] Cover successful `durantic_machine` data source lookups against the dynamically registered QEMU machine
+- [ ] Exercise at least one real `durantic_machine_deployment` apply that provisions a VM, then verify the result through controlplane and qemu-guest-agent
+- [ ] Call the reusable e2e workflow from terraform-provider CI with `suite: terraform` on trusted branches and release candidates
+
+If a short-term bridge is needed before dynamic QEMU registration is wired into the provider e2e suite, configure these temporary secrets for the existing `durantic_machine_deployment` acceptance test:
+
+- [ ] `DURANTIC_TEST_MACHINE_DEPLOYMENT_UUID` — UUID of a dedicated disposable test machine
+- [ ] `DURANTIC_TEST_MACHINE_DEPLOYMENT_MESH_NETWORK_UUID` — UUID of a mesh network to assign
+- [ ] `DURANTIC_TEST_MACHINE_DEPLOYMENT_MESH_NETWORK_UUID2` — second mesh network UUID for the update-without-reprovision test step
+- [ ] `DURANTIC_TEST_MACHINE_DEPLOYMENT_ROLE_NAMES` — comma-separated role names that exist in the test environment
 
 ## TODO: Publishing to the Terraform Registry
 
