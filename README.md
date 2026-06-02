@@ -69,6 +69,7 @@ The provider uses an OpenAPI-generated Go client:
 
 | Resource               | Description |
 |------------------------|-------------|
+| `durantic_machine_config` | Manages desired configuration for an existing Durantic machine — mesh network assignment, role names, tunnel settings, and provisioning-related config flags. |
 | `durantic_machine_role` | Manages a Durantic machine role — a named configuration template (cloud-init data, merge priority, mesh requirement, optional VIP association) applied to machines. |
 | `durantic_mesh_network` | Manages a Durantic mesh network — a WireGuard-based overlay network with a defined CIDR block, default flag, and route reflector mode. |
 | `durantic_route`        | Manages a Durantic route — a named set of network prefixes with optional machine associations and enable/disable control. |
@@ -83,6 +84,8 @@ The provider uses an OpenAPI-generated Go client:
 
 | Data Source       | Description |
 |-------------------|-------------|
+| `durantic_machine` | Looks up an existing machine by UUID or hostname, including role, mesh, public IP, and status fields. |
+| `durantic_image` | Looks up a single image by UUID, name, or Docker image URL. |
 | `durantic_images` | Lists all images available to the account (own and official). |
 
 ## Examples
@@ -92,7 +95,11 @@ The [`examples/`](examples/) directory contains ready-to-use configurations:
 | Path | Description |
 |------|-------------|
 | [`examples/provider/provider.tf`](examples/provider/provider.tf) | Provider configuration |
+| [`examples/data-sources/durantic_machine/data-source.tf`](examples/data-sources/durantic_machine/data-source.tf) | Looking up a machine and its public/mesh IPs |
+| [`examples/data-sources/durantic_image/data-source.tf`](examples/data-sources/durantic_image/data-source.tf) | Looking up a single image by Docker image URL or name |
 | [`examples/data-sources/durantic_images/data-source.tf`](examples/data-sources/durantic_images/data-source.tf) | Listing images and looking up by name |
+| [`examples/resources/durantic_machine_config/resource.tf`](examples/resources/durantic_machine_config/resource.tf) | Assigning Terraform-created roles and a mesh network to an existing machine |
+| [`examples/resources/durantic_machine_config/import.sh`](examples/resources/durantic_machine_config/import.sh) | Importing existing machine config by machine UUID |
 | [`examples/resources/durantic_machine_role/resource.tf`](examples/resources/durantic_machine_role/resource.tf) | Minimal and full machine role resource examples |
 | [`examples/resources/durantic_machine_role/import.sh`](examples/resources/durantic_machine_role/import.sh) | Importing an existing machine role by UUID |
 | [`examples/resources/durantic_mesh_network/resource.tf`](examples/resources/durantic_mesh_network/resource.tf) | Minimal and full mesh network resource examples |
@@ -227,6 +234,78 @@ terraform plan
 6. Run `TF_ACC=1 go test -v ./internal/provider/` to verify.
 
 See `internal/provider/machine_role_resource.go` for a complete reference implementation.
+
+## TODO: Terraform provider test strategy
+
+The repository will be made public so the provider can be published on the Terraform Registry. We do not expect outside contributors immediately, so CI can remain optimized for Durantic-maintained branches and trusted release workflows. The important split is between tests that are safe to run without secrets and tests that mutate a live controlplane account.
+
+The tiers below are **coverage levels gated by the credentials and infrastructure available, not three separate test suites.** The same `go test` binary does more as more is provided: with no credentials it runs static checks and unit tests; adding a live API token activates live-account acceptance; the `e2e/` harness on a KVM runner adds real provisioning. Tier 1 needs no credentials and runs on every push and pull request; Tiers 2–3 mutate real infrastructure and run on trusted branches, scheduled runs, and release candidates.
+
+How the tiers are selected to run:
+
+- Pure-Go unit tests run under plain `go test ./...` — the plugin-testing framework auto-skips every `resource.Test` when `TF_ACC` is unset, so the no-credential job needs no token.
+- Live-account acceptance tests use `resource.Test`, which only executes when `TF_ACC=1`, and needs the Terraform CLI installed plus a real `DURANTIC_API_TOKEN`.
+- In practice this is three runs:
+  - `go test ./...` → static/unit (Tier 1)
+  - `TF_ACC=1 go test ./internal/provider/` with a **dev01 autotest token** → live-account acceptance (Tier 2)
+  - `pytest -m terraform` in `e2e/` → provisioning e2e (Tier 3)
+
+### Tier 1: Static and unit CI
+
+Run on every push and pull request without Durantic credentials:
+
+- [ ] Build the provider (`go build ./...`)
+- [ ] Run Go unit tests without `TF_ACC` (`go test ./...`)
+- [ ] Run formatting and lint checks (`gofmt`, `golangci-lint`)
+- [ ] Run docs/code generation (`make generate`) and fail on an unexpected git diff
+- [ ] Keep `TestPollProvision_*` in this tier; these tests mock provision polling and require no live infrastructure
+
+Before the repo is public, make sure dependencies needed by this tier are public or otherwise available without private GitHub credentials. In particular, the OpenAPI client module (`github.com/durantic/controlplane-client-go/durantic`) must not prevent a clean public build. This is a hard gate: it blocks both this tier and Registry publishing, since CI currently fetches that module with a private GitHub App token (`GOPRIVATE`).
+
+### Tier 2: Live-account acceptance CI
+
+Run on trusted Durantic branches, scheduled runs, and release candidates with a dedicated `terraform-provider-autotest` account. Selected by providing `DURANTIC_API_TOKEN`/`DURANTIC_ENDPOINT` so the `TestAcc*` tests activate under `TF_ACC=1`:
+
+- [ ] Continue running Terraform Plugin Testing with `TF_ACC=1 go test -v -cover ./internal/provider/`
+- [ ] Use `DURANTIC_API_TOKEN` and `DURANTIC_ENDPOINT` for the target environment (the dedicated dev01 autotest account, not shared stage)
+- [ ] Use stable public base-image URLs for image data source tests instead of static image UUID secrets. For example, `ghcr.io/durantic/linux-ubuntu-25.10:latest` should remain available across environments.
+- [ ] Refactor image data source acceptance tests so UUID/name lookups are derived from the image found by `docker_image_url`, rather than configured through `DURANTIC_TEST_IMAGE_UUID` or `DURANTIC_TEST_IMAGE_NAME`.
+- [ ] Do not require static machine fixture secrets for normal provider acceptance CI. A machine record is created by agent/QEMU registration, not ordinary API CRUD, so dynamically registered machines belong in the e2e tier.
+- [ ] Keep only `durantic_machine` not-found behavior in this tier; cover successful machine lookup in the Terraform e2e suite. Do not boot QEMU machines from provider acceptance CI — that duplicates the e2e tier's job.
+- [ ] Add acceptance coverage for resources currently registered by the provider but missing tests, especially `durantic_route` and `durantic_vip`
+- [ ] Keep Terraform CLI version matrix coverage for scheduled/release workflows; use a single current Terraform version for ordinary trusted branch CI
+
+### Tier 3: Provisioning e2e CI
+
+These tests live entirely in the `e2e/` repo, as Python `pytest` cases under the `terraform` marker — they need QEMU/KVM and a real provisioning flow. The terraform-provider repo contributes only the provider binary (built from the ref under test), the `.tf` config exercised (reuse `examples/`), and a CI job that calls the reusable e2e workflow. The QGA verification step (reading state inside the booted VM) is a Python capability the Go `resource.Test` framework cannot replicate, so this is not a Go test; the detailed Go `durantic_machine_deployment` acceptance test remains the optional short-term bridge below, not the primary path.
+
+- [ ] Add `pytest.mark.terraform` tests in `e2e/` for provider-driven flows
+- [ ] Build the provider from the terraform-provider ref under test and expose it to Terraform via a CLI `dev_overrides` config (drive `plan`/`apply` directly; `terraform init` is skipped for a dev-overridden provider)
+- [ ] Prefer dynamically registered QEMU machines from the e2e fixture over long-lived static machine UUIDs
+- [ ] Cover successful `durantic_machine` data source lookups against the dynamically registered QEMU machine
+- [ ] Exercise at least one real `durantic_machine_deployment` apply that provisions a VM, then verify the result through controlplane and qemu-guest-agent. Allow the apply at least 15 minutes (matches the provider's provision poll timeout and the e2e `PROVISION_TIMEOUT`).
+- [ ] Keep these tests skippable for local development without QEMU or credentials, as the existing `t.Skip()` guards already allow
+- [ ] Call the reusable e2e workflow from terraform-provider CI with `suite: terraform` on trusted branches and release candidates
+
+If a short-term bridge is needed before dynamic QEMU registration is wired into the provider e2e suite, configure these temporary secrets for the existing `durantic_machine_deployment` acceptance test:
+
+- [ ] `DURANTIC_TEST_MACHINE_DEPLOYMENT_UUID` — UUID of a dedicated disposable test machine
+- [ ] `DURANTIC_TEST_MACHINE_DEPLOYMENT_MESH_NETWORK_UUID` — UUID of a mesh network to assign
+- [ ] `DURANTIC_TEST_MACHINE_DEPLOYMENT_MESH_NETWORK_UUID2` — second mesh network UUID for the update-without-reprovision test step
+- [ ] `DURANTIC_TEST_MACHINE_DEPLOYMENT_ROLE_NAMES` — comma-separated role names that exist in the test environment
+
+## TODO: Version the Durantic OpenAPI contract
+
+The provider imports the generated Go client module (`github.com/durantic/controlplane-client-go/durantic`). That client is generated from the controlplane OpenAPI schema exposed by Django Ninja at `/api/openapi.json`. Today the effective schema version is indirect: the deployed controlplane version, the generated Go client module tag, and the provider release that pins that module. The API paths themselves are not versioned (`/api/provisioning/...`, not `/api/v1/provisioning/...`), and the Django Ninja API does not currently declare an explicit schema version.
+
+Before treating the Terraform provider as a stable public integration, make this contract explicit:
+
+- [ ] Set OpenAPI `info.version` in the controlplane `NinjaAPI(...)`, ideally from the controlplane release version
+- [ ] Export and store the generated OpenAPI JSON artifact for each controlplane release
+- [ ] Regenerate `controlplane-client-go` only from a known schema artifact, not from whichever `/api/openapi.json` happens to be deployed at generation time
+- [ ] Tag `controlplane-client-go` releases and pin the Terraform provider to those tags in `go.mod`
+- [ ] Add CI that detects schema/client drift when controlplane API schemas or routes change
+- [ ] Decide whether path versioning (`/api/v1/...`) is necessary, or document that `/api/` remains backward compatible for published provider versions
 
 ## TODO: Publishing to the Terraform Registry
 

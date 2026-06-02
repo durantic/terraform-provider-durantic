@@ -158,6 +158,8 @@ func (p *DuranticProvider) Configure(ctx context.Context, req provider.Configure
 func (p *DuranticProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewMachineRoleResource,
+		NewMachineConfigResource,
+		NewMachineDeploymentResource,
 		NewMeshNetworkResource,
 		NewRouteResource,
 		NewVIPResource,
@@ -176,6 +178,8 @@ func (p *DuranticProvider) EphemeralResources(ctx context.Context) []func() ephe
 func (p *DuranticProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewImagesDataSource,
+		NewImageDataSource,
+		NewMachineDataSource,
 	}
 }
 
