@@ -272,9 +272,6 @@ Run on trusted Durantic branches, scheduled runs, and release candidates with a 
 - [ ] Refactor image data source acceptance tests so UUID/name lookups are derived from the image found by `docker_image_url`, rather than configured through `DURANTIC_TEST_IMAGE_UUID` or `DURANTIC_TEST_IMAGE_NAME`.
 - [ ] Do not require static machine fixture secrets for normal provider acceptance CI. A machine record is created by agent/QEMU registration, not ordinary API CRUD, so dynamically registered machines belong in the e2e tier.
 - [ ] Keep only `durantic_machine` not-found behavior in this tier; cover successful machine lookup in the Terraform e2e suite. Do not boot QEMU machines from provider acceptance CI — that duplicates the e2e tier's job.
-- [ ] Avoid static resource names in acceptance tests; add a shared random prefix helper so retries and overlapping runs do not collide
-- [ ] Add `CheckDestroy` to every resource acceptance test, verifying via the API that the resource is actually gone — this catches silent `Delete` failures and limits orphaned resources
-- [ ] Sweep the autotest account for leftover resources before each run (or keep the account disposable), so a crashed run does not wedge later runs
 - [ ] Add acceptance coverage for resources currently registered by the provider but missing tests, especially `durantic_route` and `durantic_vip`
 - [ ] Keep Terraform CLI version matrix coverage for scheduled/release workflows; use a single current Terraform version for ordinary trusted branch CI
 
@@ -296,12 +293,6 @@ If a short-term bridge is needed before dynamic QEMU registration is wired into 
 - [ ] `DURANTIC_TEST_MACHINE_DEPLOYMENT_MESH_NETWORK_UUID` — UUID of a mesh network to assign
 - [ ] `DURANTIC_TEST_MACHINE_DEPLOYMENT_MESH_NETWORK_UUID2` — second mesh network UUID for the update-without-reprovision test step
 - [ ] `DURANTIC_TEST_MACHINE_DEPLOYMENT_ROLE_NAMES` — comma-separated role names that exist in the test environment
-
-### Suggested sequencing
-
-- **Blocks going public:** make `controlplane-client-go` public (or vendor it) so Tier 1 builds without credentials.
-- **Quick wins, infra-independent:** random-prefix helper, `CheckDestroy`, `durantic_route`/`durantic_vip` tests, and image data-source self-bootstrap.
-- **Infra-dependent:** repoint live-account acceptance from shared stage to the dev01 autotest account, then wire the Tier 3 e2e suite (`suite: terraform`, dev_overrides build, machine_deployment apply).
 
 ## TODO: Version the Durantic OpenAPI contract
 
