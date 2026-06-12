@@ -4,6 +4,9 @@ name: Tests
 # This GitHub action runs your tests for each pull request and push.
 # Optionally, you can turn it on using a schedule for regular testing.
 on:
+  # Manual build + full test (incl. provisioning e2e) from any branch via the
+  # "Run workflow" dropdown.
+  workflow_dispatch:
   pull_request:
     paths-ignore:
       - 'README.md'
@@ -14,6 +17,12 @@ on:
     tags: ['v*']
     paths-ignore:
       - 'README.md'
+
+# One pipeline at a time per ref (same pattern as agent ci.yml): a new commit
+# cancels the superseded in-progress run of the same branch/PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 # Testing only needs permissions to read the repository contents.
 permissions:
@@ -137,7 +146,7 @@ jobs:
   e2e:
     name: Provisioning e2e (dev01)
     needs: build
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     # TODO(DUR-196): switch the ref to @main once durantic/e2e branch
     # DUR-196/terraform-e2e-suite is merged (main lacks provider_artifact).
     uses: durantic/e2e/.github/workflows/run.yml@DUR-196/terraform-e2e-suite
