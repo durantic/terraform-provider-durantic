@@ -294,18 +294,15 @@ If a short-term bridge is needed before dynamic QEMU registration is wired into 
 - [ ] `DURANTIC_TEST_MACHINE_DEPLOYMENT_MESH_NETWORK_UUID2` — second mesh network UUID for the update-without-reprovision test step
 - [ ] `DURANTIC_TEST_MACHINE_DEPLOYMENT_ROLE_NAMES` — comma-separated role names that exist in the test environment
 
-## TODO: Version the Durantic OpenAPI contract
+## Durantic OpenAPI contract versioning
 
-The provider imports the generated Go client module (`github.com/durantic/controlplane-client-go/durantic`). That client is generated from the controlplane OpenAPI schema exposed by Django Ninja at `/api/openapi.json`. Today the effective schema version is indirect: the deployed controlplane version, the generated Go client module tag, and the provider release that pins that module. The API paths themselves are not versioned (`/api/provisioning/...`, not `/api/v1/provisioning/...`), and the Django Ninja API does not currently declare an explicit schema version.
+The provider imports the tagged generated Go client module (`github.com/durantic/controlplane-client-go/durantic`) and pins that module in `go.mod`. The client is generated from a checked-in OpenAPI artifact, not from an arbitrary deployed `/api/openapi.json` endpoint.
 
-Before treating the Terraform provider as a stable public integration, make this contract explicit:
+The canonical controlplane schema is exported to `controlplane/schema/openapi.json`. The live Django Ninja schema sets `info.version` from `CONTROLPLANE_VERSION`, which deployed environments receive from the controlplane image tag; local exports leave it unset so the committed artifact remains stable at `dev`.
 
-- [ ] Set OpenAPI `info.version` in the controlplane `NinjaAPI(...)`, ideally from the controlplane release version
-- [ ] Export and store the generated OpenAPI JSON artifact for each controlplane release
-- [ ] Regenerate `controlplane-client-go` only from a known schema artifact, not from whichever `/api/openapi.json` happens to be deployed at generation time
-- [ ] Tag `controlplane-client-go` releases and pin the Terraform provider to those tags in `go.mod`
-- [ ] Add CI that detects schema/client drift when controlplane API schemas or routes change
-- [ ] Decide whether path versioning (`/api/v1/...`) is necessary, or document that `/api/` remains backward compatible for published provider versions
+The client repository keeps its source contract in `controlplane-client-go/openapi.json`, regenerates the generated `durantic/` package from that file, and tags releases as `durantic/v*` for Go module consumption.
+
+The `/api/` path prefix is the compatibility boundary for published provider versions. Do not introduce `/api/v1/` paths unless the provider and generated client are released together with a migration plan.
 
 ## TODO: Publishing to the Terraform Registry
 
