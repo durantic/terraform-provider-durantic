@@ -141,6 +141,9 @@ jobs:
       environment: dev01
       suite: terraform
       provider_artifact: terraform-provider-binary
+      # TODO(DUR-196): drop this ref override together with the @main switch
+      # above — the checkout inside run.yml defaults to e2e main for callers.
+      ref: DUR-196/terraform-e2e-suite
     secrets:
       API_TOKEN: ${{ secrets.E2E_TEST_API_TOKEN_DEV }}
       CHECKOUT_TOKEN: ${{ secrets.E2E_CHECKOUT_TOKEN }}
