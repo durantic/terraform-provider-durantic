@@ -7,7 +7,11 @@ on:
   pull_request:
     paths-ignore:
       - 'README.md'
+  # No branch-push trigger besides main: pull_request already covers feature
+  # branches, and an unfiltered push trigger double-runs every PR commit.
   push:
+    branches: [main]
+    tags: ['v*']
     paths-ignore:
       - 'README.md'
 
