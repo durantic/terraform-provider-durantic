@@ -277,22 +277,23 @@ Run on trusted Durantic branches, scheduled runs, and release candidates with a 
 
 ### Tier 3: Provisioning e2e CI
 
-These tests live entirely in the `e2e/` repo, as Python `pytest` cases under the `terraform` marker — they need QEMU/KVM and a real provisioning flow. The terraform-provider repo contributes only the provider binary (built from the ref under test), the `.tf` config exercised (reuse `examples/`), and a CI job that calls the reusable e2e workflow. The QGA verification step (reading state inside the booted VM) is a Python capability the Go `resource.Test` framework cannot replicate, so this is not a Go test; the detailed Go `durantic_machine_deployment` acceptance test remains the optional short-term bridge below, not the primary path.
+These tests live entirely in the `e2e/` repo, as Python `pytest` cases under the `terraform` marker — they need QEMU/KVM and a real provisioning flow. The terraform-provider repo contributes only the provider binary (built from the ref under test) and a CI job that calls the reusable e2e workflow; the `.tf` configs exercised live in `e2e/tests/terraform/` (parameterized via `TF_VAR_*` — the `examples/` here stay as Registry documentation). The QGA verification step (reading state inside the booted VM) is a Python capability the Go `resource.Test` framework cannot replicate, so this is not a Go test; the detailed Go `durantic_machine_deployment` acceptance test remains for local debugging, not the primary path.
 
-- [ ] Add `pytest.mark.terraform` tests in `e2e/` for provider-driven flows
-- [ ] Build the provider from the terraform-provider ref under test and expose it to Terraform via a CLI `dev_overrides` config (drive `plan`/`apply` directly; `terraform init` is skipped for a dev-overridden provider)
-- [ ] Prefer dynamically registered QEMU machines from the e2e fixture over long-lived static machine UUIDs
-- [ ] Cover successful `durantic_machine` data source lookups against the dynamically registered QEMU machine
-- [ ] Exercise at least one real `durantic_machine_deployment` apply that provisions a VM, then verify the result through controlplane and qemu-guest-agent. Allow the apply at least 15 minutes (matches the provider's provision poll timeout and the e2e `PROVISION_TIMEOUT`).
-- [ ] Keep these tests skippable for local development without QEMU or credentials, as the existing `t.Skip()` guards already allow
-- [ ] Call the reusable e2e workflow from terraform-provider CI with `suite: terraform` on trusted branches and release candidates
+Implemented in DUR-196 (e2e `tests/test_terraform.py` + this repo's `E2E` workflow):
 
-If a short-term bridge is needed before dynamic QEMU registration is wired into the provider e2e suite, configure these temporary secrets for the existing `durantic_machine_deployment` acceptance test:
+- [x] Add `pytest.mark.terraform` tests in `e2e/` for provider-driven flows
+- [x] Build the provider from the terraform-provider ref under test (the `E2E` workflow's build job uploads the binary as a workflow artifact consumed by the reusable e2e workflow's `provider_artifact` input) and expose it to Terraform via a CLI `dev_overrides` config (drive `plan`/`apply` directly; `terraform init` is skipped for a dev-overridden provider)
+- [x] Prefer dynamically registered QEMU machines from the e2e fixture over long-lived static machine UUIDs (`registered_vm` fixture: registered + provision-ready, not provisioned)
+- [x] Cover successful `durantic_machine` data source lookups against the dynamically registered QEMU machine (by UUID pre-provision; by hostname after the deployment apply sets it via cloud-init)
+- [x] Exercise at least one real `durantic_machine_deployment` apply that provisions a VM, then verify the result through controlplane and qemu-guest-agent. The apply budget is `TERRAFORM_APPLY_TIMEOUT` (default 1200s — covers the provider's 15-minute provision poll).
+- [x] Keep these tests skippable for local development without QEMU or credentials (they skip unless `TERRAFORM_PROVIDER_BIN` and the terraform CLI are present)
+- [x] Call the reusable e2e workflow from terraform-provider CI with `suite: terraform` on trusted branches and release candidates (`.github/workflows/e2e.yml`: `workflow_dispatch`, push to `main`, `v*` tags)
 
-- [ ] `DURANTIC_TEST_MACHINE_DEPLOYMENT_UUID` — UUID of a dedicated disposable test machine
-- [ ] `DURANTIC_TEST_MACHINE_DEPLOYMENT_MESH_NETWORK_UUID` — UUID of a mesh network to assign
-- [ ] `DURANTIC_TEST_MACHINE_DEPLOYMENT_MESH_NETWORK_UUID2` — second mesh network UUID for the update-without-reprovision test step
-- [ ] `DURANTIC_TEST_MACHINE_DEPLOYMENT_ROLE_NAMES` — comma-separated role names that exist in the test environment
+The short-term bridge (static `DURANTIC_TEST_MACHINE_DEPLOYMENT_*` secrets for
+the Go `durantic_machine_deployment` acceptance test) is **obsolete**: the e2e
+suite registers QEMU machines dynamically (DUR-196), so no static machine
+fixtures are needed. The Go acceptance test and its env-var guards remain for
+local debugging only.
 
 ## Durantic OpenAPI contract versioning
 
