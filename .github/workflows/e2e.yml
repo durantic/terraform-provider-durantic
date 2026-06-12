@@ -6,7 +6,9 @@ name: E2E
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    # TODO(DUR-196): remove the feature branch before merging — it exists only
+    # because workflow_dispatch needs the workflow on the default branch.
+    branches: [main, DUR-196/terraform-e2e-suite]
     tags: ['v*']
 
 permissions:
