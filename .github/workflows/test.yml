@@ -2,16 +2,23 @@
 name: Tests
 
 # This GitHub action runs your tests for each pull request and push.
-# Optionally, you can turn it on using a schedule for regular testing.
+# Manual build + full test (incl. provisioning e2e) from any branch via the "Run workflow" dropdown.
 on:
+  workflow_dispatch:
   pull_request:
     paths-ignore:
       - 'README.md'
   push:
+    branches: [main]
+    tags: ['v*']
     paths-ignore:
       - 'README.md'
 
-# Testing only needs permissions to read the repository contents.
+# One pipeline at a time per ref: a new commit cancels the superseded in-progress run of the same branch/PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -43,6 +50,15 @@ jobs:
         uses: golangci/golangci-lint-action@e7fa5ac41e1cf5b7d48e45e42232ce7ada589601 # v9.1.0
         with:
           version: latest
+      # Binary for the provisioning e2e job below; dev_overrides requires the terraform-provider-durantic file name.
+      - name: Build provider binary for e2e
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o dist/terraform-provider-durantic .
+      - uses: actions/upload-artifact@v7
+        with:
+          name: terraform-provider-binary
+          path: dist/terraform-provider-durantic
+          retention-days: 1
+          if-no-files-found: error
 
   generate:
     runs-on: ubuntu-latest
@@ -84,7 +100,6 @@ jobs:
       fail-fast: false
       max-parallel: 1 # Avoid a race condition
       matrix:
-        # list whatever Terraform versions here you would like to support
         terraform:
           - '1.13.*'
           - '1.14.*'
@@ -114,3 +129,18 @@ jobs:
           DURANTIC_ENDPOINT: ${{ vars.API_BASE_STAGE }}
         run: go test -v -cover ./internal/provider/
         timeout-minutes: 10
+
+  # Provisioning e2e tests
+  e2e:
+    name: Provisioning e2e (stage)
+    needs: build
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+    uses: durantic/e2e/.github/workflows/run.yml@main
+    with:
+      environment: stage
+      suite: terraform
+      provider_artifact: terraform-provider-binary
+      controlplane_api: ${{ vars.API_BASE_STAGE }}
+    secrets:
+      API_TOKEN: ${{ secrets.E2E_TEST_API_TOKEN_STAGE }}
+      CHECKOUT_TOKEN: ${{ secrets.E2E_CHECKOUT_TOKEN }}
