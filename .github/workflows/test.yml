@@ -139,17 +139,12 @@ jobs:
     name: Provisioning e2e (stage)
     needs: build
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
-    # TODO(DUR-196): switch the ref to @main once durantic/e2e branch
-    # DUR-196/terraform-e2e-suite is merged (main lacks provider_artifact).
-    uses: durantic/e2e/.github/workflows/run.yml@DUR-196/terraform-e2e-suite
+    uses: durantic/e2e/.github/workflows/run.yml@main
     with:
       environment: stage
       suite: terraform
       provider_artifact: terraform-provider-binary
       controlplane_api: ${{ vars.API_BASE_STAGE }}
-      # TODO(DUR-196): drop this ref override together with the @main switch
-      # above — the checkout inside run.yml defaults to e2e main for callers.
-      ref: DUR-196/terraform-e2e-suite
     secrets:
       API_TOKEN: ${{ secrets.E2E_TEST_API_TOKEN_STAGE }}
       CHECKOUT_TOKEN: ${{ secrets.E2E_CHECKOUT_TOKEN }}
