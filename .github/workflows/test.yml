@@ -130,11 +130,7 @@ jobs:
         run: go test -v -cover ./internal/provider/
         timeout-minutes: 10
 
-  # Tier 3 provisioning e2e: hand the binary built above to the reusable e2e
-  # workflow, which boots a QEMU VM on the self-hosted runner and provisions
-  # it via durantic_machine_deployment against staging. Gated to PRs, main, tags, 
-  # and manual dispatch so plain feature-branch pushes (which already run as part 
-  # of their PR) don't boot VMs twice.
+  # Provisioning e2e tests
   e2e:
     name: Provisioning e2e (stage)
     needs: build
