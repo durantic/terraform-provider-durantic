@@ -36,6 +36,7 @@ output "rke2_server_image_uuid" {
 ### Optional
 
 - `docker_image_url` (String) Docker image URL. Set exactly one of `uuid`, `name`, or `docker_image_url`.
+- `is_official` (Boolean) Whether this is an official image. May also be set as a filter to disambiguate a `name` or `docker_image_url` lookup when the account can see both an official image and its own copy sharing that name/URL (e.g. `is_official = true`). Ignored for `uuid` lookups.
 - `name` (String) Name of the image. Set exactly one of `uuid`, `name`, or `docker_image_url`.
 - `uuid` (String) Unique identifier for the image. Set exactly one of `uuid`, `name`, or `docker_image_url`.
 
@@ -43,7 +44,6 @@ output "rke2_server_image_uuid" {
 
 - `created_at` (String) Timestamp when the image was created.
 - `description` (String) Description of the image.
-- `is_official` (Boolean) Whether this is an official image.
 - `registry_credential_name` (String) Name of the registry credential associated with this image.
 - `registry_credential_uuid` (String) UUID of the registry credential associated with this image.
 - `updated_at` (String) Timestamp when the image was last updated.

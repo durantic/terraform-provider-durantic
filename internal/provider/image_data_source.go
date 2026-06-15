@@ -68,7 +68,8 @@ func (d *ImageDataSource) Schema(ctx context.Context, req datasource.SchemaReque
 				Computed:            true,
 			},
 			"is_official": schema.BoolAttribute{
-				MarkdownDescription: "Whether this is an official image.",
+				MarkdownDescription: "Whether this is an official image. May also be set as a filter to disambiguate a `name` or `docker_image_url` lookup when the account can see both an official image and its own copy sharing that name/URL (e.g. `is_official = true`). Ignored for `uuid` lookups.",
+				Optional:            true,
 				Computed:            true,
 			},
 			"description": schema.StringAttribute{
@@ -146,14 +147,28 @@ func (d *ImageDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		return
 	}
 
+	// is_official is an optional refinement (not a primary selector): when set,
+	// only images with that official flag are considered. This disambiguates a
+	// name/docker_image_url lookup when the account sees both an official image
+	// and its own copy sharing the same name/URL.
+	filterOfficial := !data.IsOfficial.IsNull() && !data.IsOfficial.IsUnknown()
+
 	matches := make([]durantic.ImageSchema, 0, 1)
 	for _, image := range images {
+		var selectorMatch bool
 		switch {
 		case isKnownString(data.Name) && image.GetName() == data.Name.ValueString():
-			matches = append(matches, image)
+			selectorMatch = true
 		case isKnownString(data.DockerImageURL) && image.GetDockerImageUrl() == data.DockerImageURL.ValueString():
-			matches = append(matches, image)
+			selectorMatch = true
 		}
+		if !selectorMatch {
+			continue
+		}
+		if filterOfficial && image.GetIsOfficial() != data.IsOfficial.ValueBool() {
+			continue
+		}
+		matches = append(matches, image)
 	}
 
 	if len(matches) == 0 {
@@ -167,7 +182,7 @@ func (d *ImageDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	if len(matches) > 1 {
 		resp.Diagnostics.AddError(
 			"Multiple Images Found",
-			fmt.Sprintf("Found %d images matching the configured selector. Use uuid for an unambiguous lookup.", len(matches)),
+			fmt.Sprintf("Found %d images matching the configured selector. Set is_official to disambiguate, or use uuid for an exact lookup.", len(matches)),
 		)
 		return
 	}
