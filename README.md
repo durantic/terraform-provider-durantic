@@ -235,14 +235,11 @@ terraform plan
 
 See `internal/provider/machine_role_resource.go` for a complete reference implementation.
 
-## API compatibility & contract versioning
+## API compatibility
 
-The provider imports the tagged generated Go client module (`github.com/durantic/controlplane-client-go/durantic`) and pins it in `go.mod`. The client is generated from a checked-in OpenAPI artifact, never from an arbitrary deployed `/api/openapi.json` endpoint.
+The provider is generated from the Durantic platform's OpenAPI contract, so its resource and data-source coverage tracks the API directly.
 
-- **Source of truth.** The controlplane exports its OpenAPI schema to `controlplane/schema/openapi.json` (committed; a CI drift gate keeps it in sync with the API). Each controlplane release attaches that schema as an artifact, with `info.version` set to the release tag.
-- **Client provenance.** `controlplane-client-go` keeps its source contract in `openapi.json` — refreshed from a controlplane release artifact via `make update-spec CONTROLPLANE_RELEASE=<tag>` — regenerates the `durantic/` package from it, and tags releases as `durantic/v*`. So every client tag (and every provider version pinning it) is traceable to the exact controlplane release it was built against.
-- **`info.version`.** The live schema reports the deployed build (the Helm chart injects `CONTROLPLANE_VERSION` from the image tag); committed/exported snapshots stay at `dev`.
-- **Compatibility boundary.** The `/api/` path prefix is stable — there is no `/api/v1/`, and the controlplane keeps `/api/` backward compatible for published provider versions (enforced by the schema drift gate + review). Do not introduce `/api/v1/` paths unless the provider and generated client are released together with a migration plan.
+The Durantic API is **stable and backward compatible**: there is no path-based versioning (no `/api/v1/`), and published provider releases preserve compatibility with the platform. Pin the provider with a `~>` version constraint as usual; any behavioral changes are called out in the [release notes](https://github.com/durantic/terraform-provider/releases).
 
 ## TODO: Publishing to the Terraform Registry
 
