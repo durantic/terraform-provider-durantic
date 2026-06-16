@@ -235,15 +235,11 @@ terraform plan
 
 See `internal/provider/machine_role_resource.go` for a complete reference implementation.
 
-## TODO: Durantic OpenAPI contract versioning
+## API compatibility
 
-The provider imports the tagged generated Go client module (`github.com/durantic/controlplane-client-go/durantic`) and pins that module in `go.mod`. The client is generated from a checked-in OpenAPI artifact, not from an arbitrary deployed `/api/openapi.json` endpoint.
+The provider is generated from the Durantic platform's OpenAPI contract, so its resource and data-source coverage tracks the API directly.
 
-The canonical controlplane schema is exported to `controlplane/schema/openapi.json`. The live Django Ninja schema sets `info.version` from `CONTROLPLANE_VERSION`, which deployed environments receive from the controlplane image tag; local exports leave it unset so the committed artifact remains stable at `dev`.
-
-The client repository keeps its source contract in `controlplane-client-go/openapi.json`, regenerates the generated `durantic/` package from that file, and tags releases as `durantic/v*` for Go module consumption.
-
-The `/api/` path prefix is the compatibility boundary for published provider versions. Do not introduce `/api/v1/` paths unless the provider and generated client are released together with a migration plan.
+The Durantic API is **stable and backward compatible**: there is no path-based versioning (no `/api/v1/`), and published provider releases preserve compatibility with the platform. Pin the provider with a `~>` version constraint as usual; any behavioral changes are called out in the [release notes](https://github.com/durantic/terraform-provider/releases).
 
 ## TODO: Publishing to the Terraform Registry
 
