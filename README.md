@@ -235,15 +235,14 @@ terraform plan
 
 See `internal/provider/machine_role_resource.go` for a complete reference implementation.
 
-## TODO: Durantic OpenAPI contract versioning
+## API compatibility & contract versioning
 
-The provider imports the tagged generated Go client module (`github.com/durantic/controlplane-client-go/durantic`) and pins that module in `go.mod`. The client is generated from a checked-in OpenAPI artifact, not from an arbitrary deployed `/api/openapi.json` endpoint.
+The provider imports the tagged generated Go client module (`github.com/durantic/controlplane-client-go/durantic`) and pins it in `go.mod`. The client is generated from a checked-in OpenAPI artifact, never from an arbitrary deployed `/api/openapi.json` endpoint.
 
-The canonical controlplane schema is exported to `controlplane/schema/openapi.json`. The live Django Ninja schema sets `info.version` from `CONTROLPLANE_VERSION`, which deployed environments receive from the controlplane image tag; local exports leave it unset so the committed artifact remains stable at `dev`.
-
-The client repository keeps its source contract in `controlplane-client-go/openapi.json`, regenerates the generated `durantic/` package from that file, and tags releases as `durantic/v*` for Go module consumption.
-
-The `/api/` path prefix is the compatibility boundary for published provider versions. Do not introduce `/api/v1/` paths unless the provider and generated client are released together with a migration plan.
+- **Source of truth.** The controlplane exports its OpenAPI schema to `controlplane/schema/openapi.json` (committed; a CI drift gate keeps it in sync with the API). Each controlplane release attaches that schema as an artifact, with `info.version` set to the release tag.
+- **Client provenance.** `controlplane-client-go` keeps its source contract in `openapi.json` — refreshed from a controlplane release artifact via `make update-spec CONTROLPLANE_RELEASE=<tag>` — regenerates the `durantic/` package from it, and tags releases as `durantic/v*`. So every client tag (and every provider version pinning it) is traceable to the exact controlplane release it was built against.
+- **`info.version`.** The live schema reports the deployed build (the Helm chart injects `CONTROLPLANE_VERSION` from the image tag); committed/exported snapshots stay at `dev`.
+- **Compatibility boundary.** The `/api/` path prefix is stable — there is no `/api/v1/`, and the controlplane keeps `/api/` backward compatible for published provider versions (enforced by the schema drift gate + review). Do not introduce `/api/v1/` paths unless the provider and generated client are released together with a migration plan.
 
 ## TODO: Publishing to the Terraform Registry
 
