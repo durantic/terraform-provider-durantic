@@ -70,6 +70,7 @@ The provider uses an OpenAPI-generated Go client:
 | Resource               | Description |
 |------------------------|-------------|
 | `durantic_machine_config` | Manages desired configuration for an existing Durantic machine — mesh network assignment, role names, tunnel settings, and provisioning-related config flags. |
+| `durantic_machine_deployment` | Manages configuration and OS provisioning for an existing Durantic machine — applies role, mesh, and tunnel settings and triggers a full OS install, blocking until the provision run reaches a terminal state. |
 | `durantic_machine_role` | Manages a Durantic machine role — a named configuration template (cloud-init data, merge priority, mesh requirement, optional VIP association) applied to machines. |
 | `durantic_mesh_network` | Manages a Durantic mesh network — a WireGuard-based overlay network with a defined CIDR block, default flag, and route reflector mode. |
 | `durantic_route`        | Manages a Durantic route — a named set of network prefixes with optional machine associations and enable/disable control. |
