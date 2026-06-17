@@ -13,8 +13,6 @@ Lists all images available to the account (own and official).
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-
 # List all images available to the account (own + official)
 data "durantic_images" "all" {}
 

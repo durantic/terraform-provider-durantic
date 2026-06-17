@@ -13,8 +13,6 @@ Looks up a single Durantic image by UUID, name, or Docker image URL.
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-
 # Look up an image by Docker image URL.
 data "durantic_image" "rke2_server" {
   docker_image_url = "ghcr.io/durantic/linux-ubuntu-25.10:rke2-server-1.35"

@@ -1,8 +1,9 @@
-# Copyright (c) HashiCorp, Inc.
-
 # Visit https://goreleaser.com for documentation on how to customize this
 # behavior.
 version: 2
+# Pin the project name so release artifacts are named terraform-provider-durantic_*
+# (required by the Terraform Registry), independent of the local checkout dir name.
+project_name: terraform-provider-durantic
 before:
   hooks:
     # this is just an example and not a requirement for provider building/publishing

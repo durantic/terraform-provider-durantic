@@ -13,8 +13,6 @@ Machine role resource for Durantic infrastructure
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-
 # Look up an image by name to use in a machine role
 data "durantic_images" "all" {}
 
@@ -81,7 +79,5 @@ Import is supported using the following syntax:
 The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
-# Copyright (c) HashiCorp, Inc.
-
 terraform import durantic_machine_role.example "a8ecf9c8-1721-424d-ba0f-87917dfc03d8"
 ```

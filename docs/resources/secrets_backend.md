@@ -13,8 +13,6 @@ Manages a Durantic secrets backend — an external secrets store (Vault, HTTP) t
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-
 # Minimal example — HTTP secrets backend
 resource "durantic_secrets_backend" "minimal" {
   name         = "my-secrets-backend"
@@ -67,7 +65,6 @@ The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/c
 
 ```shell
 #!/bin/bash
-# Copyright (c) HashiCorp, Inc.
 
 terraform import durantic_secrets_backend.example <UUID>
 ```

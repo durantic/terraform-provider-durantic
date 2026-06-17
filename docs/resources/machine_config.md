@@ -13,8 +13,6 @@ Manages desired configuration for an existing Durantic machine. Destroying this 
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-
 variable "gateway_hostname" {
   type    = string
   default = "gateway-01"
@@ -111,7 +109,6 @@ The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/c
 
 ```shell
 #!/bin/bash
-# Copyright (c) HashiCorp, Inc.
 
 terraform import durantic_machine_config.example <MACHINE_UUID>
 ```

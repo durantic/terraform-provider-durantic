@@ -13,8 +13,6 @@ Manages a Durantic registry credential — authentication details for a containe
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-
 # Minimal example — only required fields
 resource "durantic_registry_credential" "minimal" {
   name         = "my-registry"
@@ -62,7 +60,6 @@ The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/c
 
 ```shell
 #!/bin/bash
-# Copyright (c) HashiCorp, Inc.
 
 terraform import durantic_registry_credential.example <UUID>
 ```

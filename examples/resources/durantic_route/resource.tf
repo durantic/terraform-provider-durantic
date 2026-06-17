@@ -1,5 +1,3 @@
-# Copyright (c) HashiCorp, Inc.
-
 # Minimal example — only required fields, all defaults apply
 resource "durantic_route" "minimal" {
   name     = "internal-route"

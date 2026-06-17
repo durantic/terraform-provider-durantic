@@ -1,6 +1,6 @@
 # Terraform Provider for Durantic
 
-[![Tests](https://github.com/durantic/terraform-provider/actions/workflows/test.yml/badge.svg)](https://github.com/durantic/terraform-provider/actions/workflows/test.yml)
+[![Tests](https://github.com/durantic/terraform-provider-durantic/actions/workflows/test.yml/badge.svg)](https://github.com/durantic/terraform-provider-durantic/actions/workflows/test.yml)
 
 A Terraform provider for managing [Durantic](https://durantic.io) infrastructure resources.
 
@@ -19,7 +19,7 @@ A Terraform provider for managing [Durantic](https://durantic.io) infrastructure
 
 | Attribute             | Type   | Required | Description |
 |-----------------------|--------|----------|-------------|
-| `endpoint`            | string | No       | Durantic API endpoint URL. Defaults to `https://api.stage.durantic.dev`. |
+| `endpoint`            | string | No       | Durantic API endpoint URL. Defaults to `https://api.demo.durantic.dev`. |
 | `api_token`           | string | No*      | API token for authentication. Marked sensitive. *Required at runtime. |
 | `insecure_skip_verify`| bool   | No       | Skip TLS certificate verification. Defaults to `false`. **Development/testing only.** |
 
@@ -176,7 +176,7 @@ Set credentials before running acceptance tests:
 
 ```shell
 export DURANTIC_API_TOKEN="your-token"
-export DURANTIC_ENDPOINT="https://api.stage.durantic.dev"  # optional
+export DURANTIC_ENDPOINT="https://api.demo.durantic.dev"  # optional
 make testacc
 ```
 
@@ -239,7 +239,7 @@ See `internal/provider/machine_role_resource.go` for a complete reference implem
 
 The provider is generated from the Durantic platform's OpenAPI contract, so its resource and data-source coverage tracks the API directly.
 
-The Durantic API is **stable and backward compatible**: there is no path-based versioning (no `/api/v1/`), and published provider releases preserve compatibility with the platform. Pin the provider with a `~>` version constraint as usual; any behavioral changes are called out in the [release notes](https://github.com/durantic/terraform-provider/releases).
+The Durantic API is **stable and backward compatible**: there is no path-based versioning (no `/api/v1/`), and published provider releases preserve compatibility with the platform. Pin the provider with a `~>` version constraint as usual; any behavioral changes are called out in the [release notes](https://github.com/durantic/terraform-provider-durantic/releases).
 
 ## TODO: Publishing to the Terraform Registry
 

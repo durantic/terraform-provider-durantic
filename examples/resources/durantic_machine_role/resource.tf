@@ -1,5 +1,3 @@
-# Copyright (c) HashiCorp, Inc.
-
 # Look up an image by name to use in a machine role
 data "durantic_images" "all" {}
 

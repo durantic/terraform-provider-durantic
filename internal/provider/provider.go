@@ -1,6 +1,3 @@
-// Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
-
 package provider
 
 import (
@@ -24,7 +21,7 @@ import (
 )
 
 const (
-	defaultAPIEndpoint        = "https://api.stage.durantic.dev"
+	defaultAPIEndpoint        = "https://api.demo.durantic.dev"
 	endpointEnvName           = "DURANTIC_ENDPOINT"
 	apiTokenEnvName           = "DURANTIC_API_TOKEN"
 	insecureSkipVerifyEnvName = "DURANTIC_INSECURE_SKIP_VERIFY"

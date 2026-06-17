@@ -1,5 +1,3 @@
-# Copyright (c) HashiCorp, Inc.
-
 # Look up an existing machine by hostname.
 data "durantic_machine" "gateway" {
   hostname = "gateway-01"

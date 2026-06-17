@@ -1,5 +1,3 @@
-# Copyright (c) HashiCorp, Inc.
-
 # Minimal example — only required fields
 resource "durantic_variable" "minimal" {
   name  = "my-variable"
