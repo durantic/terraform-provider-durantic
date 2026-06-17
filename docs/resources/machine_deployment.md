@@ -21,7 +21,6 @@ Manages configuration and OS provisioning for an existing Durantic machine. On c
 
 ```terraform
 # Copyright (c) HashiCorp, Inc.
-
 # SPDX-License-Identifier: MPL-2.0
 
 data "durantic_machine" "web" {
@@ -80,7 +79,6 @@ The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/c
 
 ```shell
 # Copyright (c) HashiCorp, Inc.
-
 # SPDX-License-Identifier: MPL-2.0
 
 # Import an existing machine deployment by machine UUID.

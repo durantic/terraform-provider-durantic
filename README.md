@@ -101,6 +101,8 @@ The [`examples/`](examples/) directory contains ready-to-use configurations:
 | [`examples/data-sources/durantic_images/data-source.tf`](examples/data-sources/durantic_images/data-source.tf) | Listing images and looking up by name |
 | [`examples/resources/durantic_machine_config/resource.tf`](examples/resources/durantic_machine_config/resource.tf) | Assigning Terraform-created roles and a mesh network to an existing machine |
 | [`examples/resources/durantic_machine_config/import.sh`](examples/resources/durantic_machine_config/import.sh) | Importing existing machine config by machine UUID |
+| [`examples/resources/durantic_machine_deployment/resource.tf`](examples/resources/durantic_machine_deployment/resource.tf) | Provisioning an existing machine — assigning roles and a mesh network and triggering an OS install |
+| [`examples/resources/durantic_machine_deployment/import.sh`](examples/resources/durantic_machine_deployment/import.sh) | Importing an existing machine deployment by machine UUID |
 | [`examples/resources/durantic_machine_role/resource.tf`](examples/resources/durantic_machine_role/resource.tf) | Minimal and full machine role resource examples |
 | [`examples/resources/durantic_machine_role/import.sh`](examples/resources/durantic_machine_role/import.sh) | Importing an existing machine role by UUID |
 | [`examples/resources/durantic_mesh_network/resource.tf`](examples/resources/durantic_mesh_network/resource.tf) | Minimal and full mesh network resource examples |
