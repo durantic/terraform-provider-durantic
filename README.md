@@ -4,7 +4,7 @@
 
 A Terraform provider for managing [Durantic](https://durantic.io) infrastructure resources.
 
-**Registry address:** `registry.durantic.io/durantic/durantic` [WIP]
+**Registry address:** `registry.terraform.io/durantic/durantic`
 
 ## Requirements
 
@@ -39,7 +39,7 @@ A Terraform provider for managing [Durantic](https://durantic.io) infrastructure
 terraform {
   required_providers {
     durantic = {
-      source  = "registry.durantic.io/durantic/durantic"
+      source  = "durantic/durantic"
       version = "~> 1.0"
     }
   }
@@ -127,7 +127,7 @@ The [`examples/`](examples/) directory contains ready-to-use configurations:
 terraform {
   required_providers {
     durantic = {
-      source  = "registry.durantic.io/durantic/durantic"
+      source  = "durantic/durantic"
       version = "~> 1.0"
     }
   }
@@ -197,7 +197,7 @@ Terraform reads `~/.terraformrc` to override provider resolution. Create or edit
 ```hcl
 provider_installation {
   dev_overrides {
-    "registry.durantic.io/durantic/durantic" = "/home/USERNAME/go/bin"
+    "registry.terraform.io/durantic/durantic" = "/home/USERNAME/go/bin"
   }
 
   # For all other providers, install them directly from their origin
