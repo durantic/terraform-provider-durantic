@@ -243,13 +243,3 @@ See `internal/provider/machine_role_resource.go` for a complete reference implem
 The provider is generated from the Durantic platform's OpenAPI contract, so its resource and data-source coverage tracks the API directly.
 
 The Durantic API is **stable and backward compatible**: there is no path-based versioning (no `/api/v1/`), and published provider releases preserve compatibility with the platform. Pin the provider with a `~>` version constraint as usual; any behavioral changes are called out in the [release notes](https://github.com/durantic/terraform-provider-durantic/releases).
-
-## TODO: Publishing to the Terraform Registry
-
-The following steps are required before the provider can be published to registry.terraform.io:
-
-- [ ] Rename the GitHub repo from `terraform-provider` to `terraform-provider-durantic` (Registry requirement for provider repos)
-- [ ] Make the repo public (registry.terraform.io only supports public repositories)
-- [ ] Generate a GPG key pair (`gpg --full-generate-key`), register the public key on registry.terraform.io, and add the private key + passphrase as `GPG_PRIVATE_KEY` and `PASSPHRASE` secrets in the GitHub repo
-- [ ] Sign in to registry.terraform.io with the `durantic` GitHub org, publish the provider via the UI — this sets up the webhook that makes the Registry watch for new releases
-- [ ] Push a `v*` tag to trigger the release workflow and publish the first version
