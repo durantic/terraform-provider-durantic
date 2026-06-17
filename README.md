@@ -62,9 +62,6 @@ The provider uses an OpenAPI-generated Go client:
 - **Module:** `github.com/durantic/controlplane-client-go/durantic`
 - **Authentication:** Bearer token via `Authorization` header
 
-
-### Contributor setup
-
 ## Resources
 
 | Resource               | Description |
