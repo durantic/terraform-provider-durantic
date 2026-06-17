@@ -15,8 +15,8 @@ Use the Durantic provider to manage [Durantic](https://durantic.io) platform inf
 # Copyright (c) HashiCorp, Inc.
 
 provider "durantic" {
-  endpoint  = "https://api.durantic.io" # or set DURANTIC_ENDPOINT
-  api_token = "your-api-token"          # or set DURANTIC_API_TOKEN
+  endpoint  = "https://api.demo.durantic.dev" # or set DURANTIC_ENDPOINT
+  api_token = "your-api-token"                # or set DURANTIC_API_TOKEN
 }
 ```
 
@@ -26,5 +26,5 @@ provider "durantic" {
 ### Optional
 
 - `api_token` (String, Sensitive) API token for Durantic authentication. Can also be set via DURANTIC_API_TOKEN environment variable.
-- `endpoint` (String) Durantic API endpoint URL. Can also be set via DURANTIC_ENDPOINT environment variable. Defaults to https://api.durantic.io
+- `endpoint` (String) Durantic API endpoint URL. Can also be set via DURANTIC_ENDPOINT environment variable. Defaults to https://api.demo.durantic.dev
 - `insecure_skip_verify` (Boolean) Skip TLS certificate verification. Can also be set via DURANTIC_INSECURE_SKIP_VERIFY environment variable. Defaults to false. **WARNING:** This should only be used in development/testing environments.

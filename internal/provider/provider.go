@@ -64,7 +64,7 @@ func (p *DuranticProvider) Schema(ctx context.Context, req provider.SchemaReques
 			"Durantic API token via the `DURANTIC_API_TOKEN` environment variable (or the `api_token` argument).",
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "Durantic API endpoint URL. Can also be set via DURANTIC_ENDPOINT environment variable. Defaults to https://api.durantic.io",
+				MarkdownDescription: "Durantic API endpoint URL. Can also be set via DURANTIC_ENDPOINT environment variable. Defaults to https://api.demo.durantic.dev",
 				Optional:            true,
 			},
 			"api_token": schema.StringAttribute{
