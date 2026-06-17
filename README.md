@@ -50,7 +50,7 @@ provider "durantic" {}
 
 # Or set explicitly (avoid committing api_token to source control)
 provider "durantic" {
-  endpoint  = "https://api.durantic.io"
+  endpoint  = "https://api.demo.durantic.dev"
   api_token = var.durantic_api_token
 }
 ```
