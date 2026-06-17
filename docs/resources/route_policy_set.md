@@ -13,6 +13,8 @@ Manages a Durantic route policy set — a named ordered list of BGP route policy
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+
 # Minimal example — policy set with no rules (default accept-all)
 resource "durantic_route_policy_set" "minimal" {
   name = "my-policy"
@@ -98,6 +100,7 @@ The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/c
 
 ```shell
 #!/bin/bash
+# Copyright (c) HashiCorp, Inc.
 
 terraform import durantic_route_policy_set.example <UUID>
 ```

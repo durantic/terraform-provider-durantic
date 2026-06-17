@@ -13,6 +13,8 @@ Manages a Durantic account variable — a named key/value pair available to work
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+
 # Minimal example — only required fields
 resource "durantic_variable" "minimal" {
   name  = "my-variable"
@@ -53,6 +55,7 @@ The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/c
 
 ```shell
 #!/bin/bash
+# Copyright (c) HashiCorp, Inc.
 
 terraform import durantic_variable.example <UUID>
 ```

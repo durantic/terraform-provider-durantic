@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
@@ -54,6 +57,11 @@ func (p *DuranticProvider) Metadata(ctx context.Context, req provider.MetadataRe
 
 func (p *DuranticProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Use the Durantic provider to manage [Durantic](https://durantic.io) " +
+			"platform infrastructure as code — machine roles and configuration, mesh networks, routes " +
+			"and route policy sets, virtual IPs, registry credentials, secrets backends, and account " +
+			"secrets and variables — and to look up existing machines and images. Authenticate with a " +
+			"Durantic API token via the `DURANTIC_API_TOKEN` environment variable (or the `api_token` argument).",
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
 				MarkdownDescription: "Durantic API endpoint URL. Can also be set via DURANTIC_ENDPOINT environment variable. Defaults to https://api.durantic.io",

@@ -20,6 +20,8 @@ Manages configuration and OS provisioning for an existing Durantic machine. On c
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+
 # SPDX-License-Identifier: MPL-2.0
 
 data "durantic_machine" "web" {
@@ -77,6 +79,8 @@ Import is supported using the following syntax:
 The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
+# Copyright (c) HashiCorp, Inc.
+
 # SPDX-License-Identifier: MPL-2.0
 
 # Import an existing machine deployment by machine UUID.

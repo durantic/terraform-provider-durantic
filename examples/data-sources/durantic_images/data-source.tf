@@ -1,3 +1,5 @@
+# Copyright (c) HashiCorp, Inc.
+
 # List all images available to the account (own + official)
 data "durantic_images" "all" {}
 

@@ -1,3 +1,5 @@
+# Copyright (c) HashiCorp, Inc.
+
 # Minimal example — policy set with no rules (default accept-all)
 resource "durantic_route_policy_set" "minimal" {
   name = "my-policy"

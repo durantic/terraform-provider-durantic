@@ -13,6 +13,8 @@ VIP (Virtual IP) resource for Durantic network load balancing
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+
 # Minimal example — only required fields, all defaults apply
 resource "durantic_vip" "minimal" {
   name    = "web-vip"
@@ -73,5 +75,7 @@ Import is supported using the following syntax:
 The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
+# Copyright (c) HashiCorp, Inc.
+
 terraform import durantic_vip.example "a8ecf9c8-1721-424d-ba0f-87917dfc03d8"
 ```

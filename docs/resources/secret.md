@@ -13,6 +13,8 @@ Manages a Durantic account secret — a named sensitive value stored encrypted. 
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+
 # Minimal example — only required fields
 resource "durantic_secret" "minimal" {
   name  = "my-secret"
@@ -53,6 +55,7 @@ The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/c
 
 ```shell
 #!/bin/bash
+# Copyright (c) HashiCorp, Inc.
 
 # Note: the secret value is not returned by the API.
 # After import, set the value attribute manually in your configuration.

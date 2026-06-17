@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 // # Test tiers for durantic_machine_deployment
 //
 // Unit tests (TestPollProvision_*):

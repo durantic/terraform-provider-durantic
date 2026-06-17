@@ -1,3 +1,5 @@
+# Copyright (c) HashiCorp, Inc.
+
 variable "gateway_hostname" {
   type    = string
   default = "gateway-01"

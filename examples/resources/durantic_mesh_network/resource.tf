@@ -1,3 +1,5 @@
+# Copyright (c) HashiCorp, Inc.
+
 # Minimal example — only required fields, all defaults apply
 resource "durantic_mesh_network" "minimal" {
   name         = "my-mesh-network"

@@ -1,3 +1,5 @@
+# Copyright (c) HashiCorp, Inc.
+
 # Minimal example — HTTP secrets backend
 resource "durantic_secrets_backend" "minimal" {
   name         = "my-secrets-backend"
