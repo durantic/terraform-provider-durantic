@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	defaultAPIEndpoint        = "https://api.demo.durantic.dev"
+	defaultAPIEndpoint        = "https://api.app.durantic.dev"
 	endpointEnvName           = "DURANTIC_ENDPOINT"
 	apiTokenEnvName           = "DURANTIC_API_TOKEN"
 	insecureSkipVerifyEnvName = "DURANTIC_INSECURE_SKIP_VERIFY"
@@ -64,7 +64,7 @@ func (p *DuranticProvider) Schema(ctx context.Context, req provider.SchemaReques
 			"Durantic API token via the `DURANTIC_API_TOKEN` environment variable (or the `api_token` argument).",
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "Durantic API endpoint URL. Can also be set via DURANTIC_ENDPOINT environment variable. Defaults to https://api.demo.durantic.dev",
+				MarkdownDescription: "Durantic API endpoint URL. Can also be set via DURANTIC_ENDPOINT environment variable. Defaults to https://api.app.durantic.dev",
 				Optional:            true,
 			},
 			"api_token": schema.StringAttribute{

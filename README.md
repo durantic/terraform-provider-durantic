@@ -19,7 +19,7 @@ A Terraform provider for managing [Durantic](https://durantic.io) infrastructure
 
 | Attribute             | Type   | Required | Description |
 |-----------------------|--------|----------|-------------|
-| `endpoint`            | string | No       | Durantic API endpoint URL. Defaults to `https://api.demo.durantic.dev`. |
+| `endpoint`            | string | No       | Durantic API endpoint URL. Defaults to `https://api.app.durantic.dev`. |
 | `api_token`           | string | No*      | API token for authentication. Marked sensitive. *Required at runtime. |
 | `insecure_skip_verify`| bool   | No       | Skip TLS certificate verification. Defaults to `false`. **Development/testing only.** |
 
@@ -50,7 +50,7 @@ provider "durantic" {}
 
 # Or set explicitly (avoid committing api_token to source control)
 provider "durantic" {
-  endpoint  = "https://api.demo.durantic.dev"
+  endpoint  = "https://api.app.durantic.dev"
   api_token = var.durantic_api_token
 }
 ```
@@ -176,7 +176,7 @@ Set credentials before running acceptance tests:
 
 ```shell
 export DURANTIC_API_TOKEN="your-token"
-export DURANTIC_ENDPOINT="https://api.demo.durantic.dev"  # optional
+export DURANTIC_ENDPOINT="https://api.app.durantic.dev"  # optional
 make testacc
 ```
 
