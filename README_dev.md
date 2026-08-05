@@ -29,7 +29,7 @@ Acceptance tests require credentials:
 
 ```bash
 export DURANTIC_API_TOKEN="your-token"
-export DURANTIC_ENDPOINT="https://api.demo.durantic.dev"   # optional; this is the default
+export DURANTIC_ENDPOINT="https://api.app.durantic.dev"   # optional; this is the default
 make testacc
 ```
 
