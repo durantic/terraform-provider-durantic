@@ -1,3 +1,9 @@
+## 1.1.0 (August 5, 2026)
+
+BREAKING CHANGES:
+
+* provider: the default API `endpoint` changed from `https://api.demo.durantic.dev` to `https://api.app.durantic.dev` — the new Durantic production environment. Configurations that omit `endpoint` now target production. If your account lives on the demo environment, set `endpoint = "https://api.demo.durantic.dev"` (or `DURANTIC_ENDPOINT`) explicitly, otherwise existing demo API tokens will fail authentication against the new default.
+
 ## 1.0.0 (June 17, 2026)
 
 Initial release of the Durantic Terraform provider, for managing Durantic platform infrastructure through the Durantic API. Configure the provider with a Durantic API token (`DURANTIC_API_TOKEN`) and, optionally, a custom API `endpoint` (`DURANTIC_ENDPOINT`).
