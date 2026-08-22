@@ -57,7 +57,8 @@ func (r *MachineDeploymentResource) Schema(ctx context.Context, req resource.Sch
 			"On create or replace, applies the desired configuration and triggers a full OS install (`rebuild` mode): " +
 			"the machine kexecs into the installer, downloads the OCI image specified by `role_names`, " +
 			"writes it to disk, runs cloud-init, and reboots into the installed system. " +
-			"The resource blocks until provisioning reaches a terminal state (`completed`, `error`, `timeout`, `canceled`, or `render_failed`). " +
+			"The resource blocks until provisioning reaches a terminal state (`completed`, `error`, `timeout`, `canceled`, `render_failed`, or `degraded`). " +
+			"Only `completed` is a success: `degraded` means the OS was installed and the machine is usable, but cloud-init did not apply the configuration as specified, so the apply fails. " +
 			"Destroying this resource removes it from Terraform state only — the machine is not deleted or re-provisioned.\n\n" +
 			"**Provision triggers:**\n" +
 			"- `role_names` or `force_provision` change → resource is replaced → new provision run\n" +
@@ -87,8 +88,9 @@ func (r *MachineDeploymentResource) Schema(ctx context.Context, req resource.Sch
 				},
 			},
 			"provision_status": schema.StringAttribute{
-				MarkdownDescription: "Terminal status of the last provision run: `completed`, `error`, `timeout`, `canceled`, or `render_failed`.",
-				Computed:            true,
+				MarkdownDescription: "Terminal status of the last provision run: `completed`, `error`, `timeout`, `canceled`, `render_failed`, or `degraded`. " +
+					"Only `completed` is a success; `degraded` means the machine installed and is usable but cloud-init did not apply the configuration as specified.",
+				Computed: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},

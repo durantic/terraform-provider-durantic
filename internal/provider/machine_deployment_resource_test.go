@@ -166,6 +166,60 @@ func TestPollProvision_ErrorStatusNoMessage(t *testing.T) {
 	}
 }
 
+// TestPollProvision_Degraded pins the disposition of the `degraded` provision
+// status: a build that installed the OS but whose cloud-init did not converge
+// must FAIL the apply, not quietly succeed. `pollProvision` needs no special
+// case for it — it errors on any terminal status that is not "completed" — so
+// this test guards that generic branch against a future "only fail on the
+// statuses we know about" refactor.
+func TestPollProvision_Degraded(t *testing.T) {
+	r := newTestDeploymentResource()
+	fetch := func(_ context.Context, _, _ string) (*durantic.ProvisionDetailSchema, *http.Response, error) {
+		return makeDetail("degraded", true, "cloud-init module 'runcmd' failed"), nil, nil
+	}
+
+	status, diags := r.pollProvision(context.Background(), "machine-1", "provision-1", fetch)
+	if !diags.HasError() {
+		t.Fatal("expected an error diagnostic: a degraded build must fail the apply")
+	}
+	if status != "degraded" {
+		t.Errorf("expected degraded status, got %q", status)
+	}
+	if diags[0].Summary() != "Provision Failed (degraded)" {
+		t.Errorf("summary should name the status so the cause is legible, got: %q", diags[0].Summary())
+	}
+	if !strings.Contains(diags[0].Detail(), "cloud-init module 'runcmd' failed") {
+		t.Errorf("error detail should carry the cloud-init failure, got: %q", diags[0].Detail())
+	}
+}
+
+// TestPollProvision_AwaitingCloudInit pins that `awaiting_cloud_init` is
+// non-terminal: the poll must keep going rather than exiting or erroring. The
+// fetcher returns it twice before "completed", so an early exit shows up as a
+// wrong call count and an early error shows up as a failed diagnostic check.
+func TestPollProvision_AwaitingCloudInit(t *testing.T) {
+	r := newTestDeploymentResource()
+	calls := 0
+	fetch := func(_ context.Context, _, _ string) (*durantic.ProvisionDetailSchema, *http.Response, error) {
+		calls++
+		if calls < 3 {
+			return makeDetail("awaiting_cloud_init", false, ""), nil, nil
+		}
+		return makeDetail("completed", true, ""), nil, nil
+	}
+
+	status, diags := r.pollProvision(context.Background(), "machine-1", "provision-1", fetch)
+	if diags.HasError() {
+		t.Fatalf("awaiting_cloud_init is non-terminal and must not error: %v", diags)
+	}
+	if status != "completed" {
+		t.Errorf("expected completed, got %q", status)
+	}
+	if calls != 3 {
+		t.Errorf("expected the poll to continue through awaiting_cloud_init (3 calls), got %d", calls)
+	}
+}
+
 // --- Acceptance tests (require real infrastructure) ---
 
 func TestAccMachineDeploymentResource(t *testing.T) {

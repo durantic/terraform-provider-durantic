@@ -3,14 +3,14 @@
 page_title: "durantic_machine_deployment Resource - durantic"
 subcategory: ""
 description: |-
-  Manages configuration and OS provisioning for an existing Durantic machine. On create or replace, applies the desired configuration and triggers a full OS install (rebuild mode): the machine kexecs into the installer, downloads the OCI image specified by role_names, writes it to disk, runs cloud-init, and reboots into the installed system. The resource blocks until provisioning reaches a terminal state (completed, error, timeout, canceled, or render_failed). Destroying this resource removes it from Terraform state only — the machine is not deleted or re-provisioned.
+  Manages configuration and OS provisioning for an existing Durantic machine. On create or replace, applies the desired configuration and triggers a full OS install (rebuild mode): the machine kexecs into the installer, downloads the OCI image specified by role_names, writes it to disk, runs cloud-init, and reboots into the installed system. The resource blocks until provisioning reaches a terminal state (completed, error, timeout, canceled, render_failed, or degraded). Only completed is a success: degraded means the OS was installed and the machine is usable, but cloud-init did not apply the configuration as specified, so the apply fails. Destroying this resource removes it from Terraform state only — the machine is not deleted or re-provisioned.
   Provision triggers:
   role_names or force_provision change → resource is replaced → new provision runmesh_network_uuid and other config attributes change → in-place update only, no provisionterraform apply -replace on a specific instance → new provision run for that machine
 ---
 
 # durantic_machine_deployment (Resource)
 
-Manages configuration and OS provisioning for an existing Durantic machine. On create or replace, applies the desired configuration and triggers a full OS install (`rebuild` mode): the machine kexecs into the installer, downloads the OCI image specified by `role_names`, writes it to disk, runs cloud-init, and reboots into the installed system. The resource blocks until provisioning reaches a terminal state (`completed`, `error`, `timeout`, `canceled`, or `render_failed`). Destroying this resource removes it from Terraform state only — the machine is not deleted or re-provisioned.
+Manages configuration and OS provisioning for an existing Durantic machine. On create or replace, applies the desired configuration and triggers a full OS install (`rebuild` mode): the machine kexecs into the installer, downloads the OCI image specified by `role_names`, writes it to disk, runs cloud-init, and reboots into the installed system. The resource blocks until provisioning reaches a terminal state (`completed`, `error`, `timeout`, `canceled`, `render_failed`, or `degraded`). Only `completed` is a success: `degraded` means the OS was installed and the machine is usable, but cloud-init did not apply the configuration as specified, so the apply fails. Destroying this resource removes it from Terraform state only — the machine is not deleted or re-provisioned.
 
 **Provision triggers:**
 - `role_names` or `force_provision` change → resource is replaced → new provision run
@@ -65,7 +65,7 @@ resource "durantic_machine_deployment" "web" {
 - `needs_provisioning` (Boolean) Whether this machine has pending config changes that require a provision run to apply.
 - `pending_config_push` (Boolean) Whether this machine has a pending config push.
 - `private_ip_addresses` (List of String) Private IP addresses for this machine. Contains the mesh IP when available.
-- `provision_status` (String) Terminal status of the last provision run: `completed`, `error`, `timeout`, `canceled`, or `render_failed`.
+- `provision_status` (String) Terminal status of the last provision run: `completed`, `error`, `timeout`, `canceled`, `render_failed`, or `degraded`. Only `completed` is a success; `degraded` means the machine installed and is usable but cloud-init did not apply the configuration as specified.
 - `provision_uuid` (String) UUID of the provision run triggered by this resource. Populated after a successful provision.
 - `public_ip_addresses` (List of String) Public/selectable IP addresses for this machine.
 - `uuid` (String) Unique identifier for the machine.
