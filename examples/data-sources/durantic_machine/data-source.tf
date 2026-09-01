@@ -11,5 +11,5 @@ output "gateway_public_ips" {
 }
 
 output "gateway_mesh_ip" {
-  value = data.durantic_machine.gateway.wg_ip_address
+  value = data.durantic_machine.gateway.mesh_ip_address
 }

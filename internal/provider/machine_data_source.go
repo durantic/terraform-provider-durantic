@@ -24,10 +24,13 @@ type MachineDataSource struct {
 }
 
 type MachineCommonModel struct {
-	UUID                  types.String `tfsdk:"uuid"`
-	Hostname              types.String `tfsdk:"hostname"`
-	RoleNames             types.List   `tfsdk:"role_names"`
-	MeshNetworkUUID       types.String `tfsdk:"mesh_network_uuid"`
+	UUID            types.String `tfsdk:"uuid"`
+	Hostname        types.String `tfsdk:"hostname"`
+	RoleNames       types.List   `tfsdk:"role_names"`
+	MeshNetworkUUID types.String `tfsdk:"mesh_network_uuid"`
+	MeshIPAddress   types.String `tfsdk:"mesh_ip_address"`
+	// Deprecated: the control plane renamed this field to mesh_ip_address. Kept
+	// populated from the same value so existing configurations keep working.
 	WgIPAddress           types.String `tfsdk:"wg_ip_address"`
 	DiscoveredIPAddresses types.List   `tfsdk:"discovered_ip_addresses"`
 	PublicIPAddresses     types.List   `tfsdk:"public_ip_addresses"`
@@ -76,9 +79,14 @@ func (d *MachineDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 				MarkdownDescription: "UUID of the mesh network assigned to this machine.",
 				Computed:            true,
 			},
-			"wg_ip_address": schema.StringAttribute{
+			"mesh_ip_address": schema.StringAttribute{
 				MarkdownDescription: "Mesh IP address assigned to this machine.",
 				Computed:            true,
+			},
+			"wg_ip_address": schema.StringAttribute{
+				MarkdownDescription: "Deprecated alias for `mesh_ip_address`.",
+				Computed:            true,
+				DeprecationMessage:  "Renamed to mesh_ip_address; this alias is populated from the same value and will be removed in a future major version.",
 			},
 			"discovered_ip_addresses": schema.ListAttribute{
 				MarkdownDescription: "IP addresses discovered for this machine.",

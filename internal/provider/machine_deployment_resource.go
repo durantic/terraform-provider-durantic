@@ -150,9 +150,14 @@ func (r *MachineDeploymentResource) Schema(ctx context.Context, req resource.Sch
 				Optional:            true,
 				Computed:            true,
 			},
-			"wg_ip_address": schema.StringAttribute{
-				MarkdownDescription: "Mesh (WireGuard) IP address assigned to this machine.",
+			"mesh_ip_address": schema.StringAttribute{
+				MarkdownDescription: "Mesh IP address assigned to this machine.",
 				Computed:            true,
+			},
+			"wg_ip_address": schema.StringAttribute{
+				MarkdownDescription: "Deprecated alias for `mesh_ip_address`.",
+				Computed:            true,
+				DeprecationMessage:  "Renamed to mesh_ip_address; this alias is populated from the same value and will be removed in a future major version.",
 			},
 			"discovered_ip_addresses": schema.ListAttribute{
 				MarkdownDescription: "IP addresses discovered for this machine.",

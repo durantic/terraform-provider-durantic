@@ -62,6 +62,7 @@ resource "durantic_machine_deployment" "web" {
 - `discovered_ip_addresses` (List of String) IP addresses discovered for this machine.
 - `hostname` (String) Machine hostname.
 - `is_online` (Boolean) Whether this machine is currently online.
+- `mesh_ip_address` (String) Mesh IP address assigned to this machine.
 - `needs_provisioning` (Boolean) Whether this machine has pending config changes that require a provision run to apply.
 - `pending_config_push` (Boolean) Whether this machine has a pending config push.
 - `private_ip_addresses` (List of String) Private IP addresses for this machine. Contains the mesh IP when available.
@@ -69,7 +70,7 @@ resource "durantic_machine_deployment" "web" {
 - `provision_uuid` (String) UUID of the provision run triggered by this resource. Populated after a successful provision.
 - `public_ip_addresses` (List of String) Public/selectable IP addresses for this machine.
 - `uuid` (String) Unique identifier for the machine.
-- `wg_ip_address` (String) Mesh (WireGuard) IP address assigned to this machine.
+- `wg_ip_address` (String, Deprecated) Deprecated alias for `mesh_ip_address`.
 
 ## Import
 

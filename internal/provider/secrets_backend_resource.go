@@ -138,7 +138,8 @@ func (r *SecretsBackendResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	createReq := durantic.NewCreateSecretsBackendSchema(data.Name.ValueString(), *backendType, data.URL.ValueString())
+	// Generated constructor takes (backendType, name, url); the type moved first.
+	createReq := durantic.NewCreateSecretsBackendSchema(*backendType, data.Name.ValueString(), data.URL.ValueString())
 	createReq.SetCaCert(data.CACert.ValueString())
 	createReq.SetEnabled(data.Enabled.ValueBool())
 

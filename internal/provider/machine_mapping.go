@@ -15,16 +15,6 @@ func stringListValue(values []string) (types.List, diag.Diagnostics) {
 	return types.ListValueFrom(context.Background(), types.StringType, values)
 }
 
-func stringListFromPointers(values []*string) []string {
-	result := make([]string, 0, len(values))
-	for _, value := range values {
-		if value != nil {
-			result = append(result, *value)
-		}
-	}
-	return result
-}
-
 func nullableStringValue(value *string, ok bool) types.String {
 	if ok && value != nil {
 		return types.StringValue(*value)
@@ -46,7 +36,11 @@ func mapMachineResponseToCommonModel(machine *durantic.MachineResponseSchema, mo
 	model.Hostname = types.StringValue(machine.GetHostname())
 	model.NeedsProvisioning = types.BoolValue(machine.GetNeedsProvisioning())
 	model.PendingConfigPush = nullableBoolValue(machine.GetPendingConfigPushOk())
-	model.WgIPAddress = nullableStringValue(machine.GetWgIpAddressOk())
+	// One source, two attributes. The API field is `mesh_ip_address` since
+	// controlplane#203; `wg_ip_address` is a deprecated alias so a practitioner's
+	// existing config keeps resolving instead of silently going empty.
+	model.MeshIPAddress = nullableStringValue(machine.GetMeshIpAddressOk())
+	model.WgIPAddress = model.MeshIPAddress
 	model.IsOnline = nullableBoolValue(machine.GetIsOnlineOk())
 	model.TunnelType = types.StringValue(string(machine.GetTunnelType()))
 	model.StunEnabled = nullableBoolValue(machine.GetStunEnabledOk())
@@ -65,7 +59,8 @@ func mapMachineResponseToCommonModel(machine *durantic.MachineResponseSchema, mo
 	diags.Append(d...)
 	model.RoleNames = roleNames
 
-	discoveredIPAddresses := stringListFromPointers(machine.GetDiscoveredIpAddresses())
+	// The generated getter returns []string now, not []*string.
+	discoveredIPAddresses := machine.GetDiscoveredIpAddresses()
 	discoveredIPs, d := stringListValue(discoveredIPAddresses)
 	diags.Append(d...)
 	model.DiscoveredIPAddresses = discoveredIPs
@@ -75,8 +70,8 @@ func mapMachineResponseToCommonModel(machine *durantic.MachineResponseSchema, mo
 	model.PublicIPAddresses = publicIPs
 
 	privateIPAddresses := []string{}
-	if !model.WgIPAddress.IsNull() && !model.WgIPAddress.IsUnknown() && model.WgIPAddress.ValueString() != "" {
-		privateIPAddresses = append(privateIPAddresses, model.WgIPAddress.ValueString())
+	if !model.MeshIPAddress.IsNull() && !model.MeshIPAddress.IsUnknown() && model.MeshIPAddress.ValueString() != "" {
+		privateIPAddresses = append(privateIPAddresses, model.MeshIPAddress.ValueString())
 	}
 	privateIPs, d := stringListValue(privateIPAddresses)
 	diags.Append(d...)

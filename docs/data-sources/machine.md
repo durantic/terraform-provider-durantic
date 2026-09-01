@@ -26,7 +26,7 @@ output "gateway_public_ips" {
 }
 
 output "gateway_mesh_ip" {
-  value = data.durantic_machine.gateway.wg_ip_address
+  value = data.durantic_machine.gateway.mesh_ip_address
 }
 ```
 
@@ -46,6 +46,7 @@ output "gateway_mesh_ip" {
 - `inject_agent` (Boolean) Whether agent injection is enabled for this machine.
 - `is_online` (Boolean) Whether this machine is currently online.
 - `kexec_installer` (Boolean) Whether kexec installer is enabled for this machine.
+- `mesh_ip_address` (String) Mesh IP address assigned to this machine.
 - `mesh_network_uuid` (String) UUID of the mesh network assigned to this machine.
 - `needs_provisioning` (Boolean) Whether this machine needs provisioning.
 - `pending_config_push` (Boolean) Whether this machine has a pending config push.
@@ -55,4 +56,4 @@ output "gateway_mesh_ip" {
 - `stun_enabled` (Boolean) Whether STUN is enabled for this machine.
 - `target_disk` (String) Target disk configured for this machine.
 - `tunnel_type` (String) Configured tunnel type.
-- `wg_ip_address` (String) Mesh IP address assigned to this machine.
+- `wg_ip_address` (String, Deprecated) Deprecated alias for `mesh_ip_address`.

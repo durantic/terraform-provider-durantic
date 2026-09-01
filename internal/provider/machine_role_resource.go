@@ -374,8 +374,14 @@ func mapMachineRoleToModel(role *durantic.MachineRoleSchema, model *MachineRoleR
 		model.VipUUID = types.StringNull()
 	}
 
-	if role.HasRequiredImageName() {
-		model.RequiredImageName = types.StringValue(role.GetRequiredImageName())
+	// The API field is `required_image_url` now; `required_image_name` is gone.
+	// Populate the existing attribute from the URL, which is exactly what the
+	// hand-written raw path in `mapRawToMachineRoleModel` already does -- it has
+	// fallen back to `required_image_url` for a while. Matching it here keeps the
+	// two paths agreeing rather than introducing a second answer, and needs no
+	// change to the published attribute.
+	if role.HasRequiredImageUrl() {
+		model.RequiredImageName = types.StringValue(role.GetRequiredImageUrl())
 	} else {
 		model.RequiredImageName = types.StringNull()
 	}

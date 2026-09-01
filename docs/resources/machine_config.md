@@ -96,12 +96,13 @@ resource "durantic_machine_config" "gateway" {
 - `discovered_ip_addresses` (List of String) IP addresses discovered for this machine.
 - `hostname` (String) Machine hostname.
 - `is_online` (Boolean) Whether this machine is currently online.
+- `mesh_ip_address` (String) Mesh IP address assigned to this machine.
 - `needs_provisioning` (Boolean) Whether this machine needs provisioning.
 - `pending_config_push` (Boolean) Whether this machine has a pending config push.
 - `private_ip_addresses` (List of String) Private IP addresses for this machine. Contains the mesh IP when available.
 - `public_ip_addresses` (List of String) Public/selectable IP addresses for this machine. Mirrors discovered IP addresses used by the Cluster Wizard.
 - `uuid` (String) Unique identifier for the machine.
-- `wg_ip_address` (String) Mesh IP address assigned to this machine.
+- `wg_ip_address` (String, Deprecated) Deprecated alias for `mesh_ip_address`.
 
 ## Import
 
