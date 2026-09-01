@@ -15,16 +15,6 @@ func stringListValue(values []string) (types.List, diag.Diagnostics) {
 	return types.ListValueFrom(context.Background(), types.StringType, values)
 }
 
-func stringListFromPointers(values []*string) []string {
-	result := make([]string, 0, len(values))
-	for _, value := range values {
-		if value != nil {
-			result = append(result, *value)
-		}
-	}
-	return result
-}
-
 func nullableStringValue(value *string, ok bool) types.String {
 	if ok && value != nil {
 		return types.StringValue(*value)
