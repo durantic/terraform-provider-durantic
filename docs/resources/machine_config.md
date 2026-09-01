@@ -101,7 +101,8 @@ resource "durantic_machine_config" "gateway" {
 - `private_ip_addresses` (List of String) Private IP addresses for this machine. Contains the mesh IP when available.
 - `public_ip_addresses` (List of String) Public/selectable IP addresses for this machine. Mirrors discovered IP addresses used by the Cluster Wizard.
 - `uuid` (String) Unique identifier for the machine.
-- `wg_ip_address` (String) Mesh IP address assigned to this machine.
+- `mesh_ip_address` (String) Mesh IP address assigned to this machine.
+- `wg_ip_address` (String, Deprecated) Deprecated alias for `mesh_ip_address`. Renamed to mesh_ip_address; this alias is populated from the same value and will be removed in a future major version.
 
 ## Import
 

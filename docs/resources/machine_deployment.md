@@ -69,7 +69,8 @@ resource "durantic_machine_deployment" "web" {
 - `provision_uuid` (String) UUID of the provision run triggered by this resource. Populated after a successful provision.
 - `public_ip_addresses` (List of String) Public/selectable IP addresses for this machine.
 - `uuid` (String) Unique identifier for the machine.
-- `wg_ip_address` (String) Mesh (WireGuard) IP address assigned to this machine.
+- `mesh_ip_address` (String) Mesh IP address assigned to this machine.
+- `wg_ip_address` (String, Deprecated) Deprecated alias for `mesh_ip_address`. Renamed to mesh_ip_address; this alias is populated from the same value and will be removed in a future major version.
 
 ## Import
 
