@@ -125,12 +125,15 @@ func (r *RegistryCredentialResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	createReq := durantic.NewCreateRegistryCredentialSchema(
-		data.Name.ValueString(),
-		data.RegistryURL.ValueString(),
-		data.Username.ValueString(),
-		data.Password.ValueString(),
-	)
+	// Named setters, not positional args -- see the note in vip_resource.go.
+	// This call had rotated by one against the generated signature
+	// (name, password, registryUrl, username), so the password was being sent
+	// as the username.
+	createReq := durantic.NewCreateRegistryCredentialSchemaWithDefaults()
+	createReq.SetName(data.Name.ValueString())
+	createReq.SetRegistryUrl(data.RegistryURL.ValueString())
+	createReq.SetUsername(data.Username.ValueString())
+	createReq.SetPassword(data.Password.ValueString())
 	createReq.SetDescription(data.Description.ValueString())
 
 	cred, httpResp, err := r.client.RegistryCredentialsAPI.
