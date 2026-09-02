@@ -1,3 +1,9 @@
+## 1.1.1 (September 2, 2026)
+
+BUG FIXES:
+
+* provider: every resource and data source failed with `json: unknown field "..."` against control planes newer than the API the provider was generated from — for 1.1.0, any control plane at or after `2026.08.18` (the machine resources: `unknown field "environment_slug"`). The generated API client rejected response fields it did not know about, so an additive API change broke already-published providers. The client is regenerated to ignore unknown response fields (`controlplane-client-go` `durantic/v0.0.4`, same API surface as `v0.0.3`); this release changes nothing else. Providers 1.0.0 and 1.1.0 are **not** forward-compatible with newer control planes; upgrade.
+
 ## 1.1.0 (August 5, 2026)
 
 BREAKING CHANGES:
