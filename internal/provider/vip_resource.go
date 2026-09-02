@@ -171,7 +171,13 @@ func (r *VIPResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	createReq := durantic.NewCreateVIPSchema(data.Name.ValueString(), data.Address.ValueString())
+	// Named setters, not positional args: the generated constructor takes its
+	// required params in ALPHABETICAL order, so regenerating the client can
+	// silently reorder them. Both of these are strings, so a swap compiles,
+	// vets and lints clean -- it only shows up as a 400 from the API.
+	createReq := durantic.NewCreateVIPSchemaWithDefaults()
+	createReq.SetName(data.Name.ValueString())
+	createReq.SetAddress(data.Address.ValueString())
 	createReq.SetEnabled(data.Enabled.ValueBool())
 	createReq.SetHealthCheckType(durantic.HealthCheckType(data.HealthCheckType.ValueString()))
 	createReq.SetHealthCheckTarget(data.HealthCheckTarget.ValueString())
