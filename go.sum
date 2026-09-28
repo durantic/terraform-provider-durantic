@@ -20,8 +20,8 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/durantic/controlplane-client-go/durantic v0.1.0 h1:IaGWKIs1krDpSmsYGiCbsDs41Q9XEdj11CtPvz8/wbA=
-github.com/durantic/controlplane-client-go/durantic v0.1.0/go.mod h1:2SvOsM1VmZqCzaNIVRNmcIBC6eCq//5zB+28tL80lpE=
+github.com/durantic/controlplane-client-go/durantic v0.1.1-0.20260902081133-64a76d105e5c h1:wtPc6xHC9kiDlA8OeTe8SbEeCxrUI7L83ea19n7AVt8=
+github.com/durantic/controlplane-client-go/durantic v0.1.1-0.20260902081133-64a76d105e5c/go.mod h1:2SvOsM1VmZqCzaNIVRNmcIBC6eCq//5zB+28tL80lpE=
 github.com/emirpasic/gods v1.18.1 h1:FXtiHYKDGKCW2KzwZKx0iC0PQmdlorYgdFG9jPXJ1Bc=
 github.com/emirpasic/gods v1.18.1/go.mod h1:8tpGGwCnJ5H4r6BWwaV6OrWmMoPhUl5jm/FMNAnJvWQ=
 github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYFFOfk=
