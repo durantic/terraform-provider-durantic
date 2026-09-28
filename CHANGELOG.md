@@ -10,8 +10,7 @@ DEPRECATIONS:
 
 BUG FIXES:
 
-* resource/durantic_registry_credential: the create request passed its fields in the wrong positions, sending the password as the username.
-* resource/durantic_vip: the create request now sets `name` and `address` by name rather than by position, so a regenerated client cannot silently swap them.
+* resource/durantic_registry_credential, resource/durantic_vip: create requests now set their fields by name rather than by position. The regenerated API client orders constructor parameters differently, and positional calls would have sent the password as the username and swapped a VIP's name and address. Released versions were not affected.
 * provider: the generated API client is updated to the current API surface and still ignores response fields it does not know about, so this release stays compatible with newer control planes, as 1.1.1 did.
 
 ## 1.1.1 (September 2, 2026)
