@@ -164,6 +164,17 @@ func testAccSweepLeftovers() {
 		},
 	)
 
+	// Peers reference route policy sets, so sweep them first or a leftover policy
+	// set could fail to delete while a leftover peer still points at it.
+	testAccSweep[durantic.ExternalBGPPeerSchema]("external_bgp_peer",
+		func() ([]durantic.ExternalBGPPeerSchema, *http.Response, error) {
+			return client.ExternalBGPPeersAPI.ControlplaneApiListExternalBgpPeers(ctx).Execute()
+		},
+		func(uuid string) (*http.Response, error) {
+			return client.ExternalBGPPeersAPI.ControlplaneApiDeleteExternalBgpPeer(ctx, uuid).Execute()
+		},
+	)
+
 	testAccSweep[durantic.RoutePolicySetSchema]("route_policy_set",
 		func() ([]durantic.RoutePolicySetSchema, *http.Response, error) {
 			return client.RoutePolicySetsAPI.ControlplaneApiListRoutePolicySets(ctx).Execute()

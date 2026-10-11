@@ -173,6 +173,7 @@ func (p *DuranticProvider) Resources(ctx context.Context) []func() resource.Reso
 		NewSecretResource,
 		NewVariableResource,
 		NewRoutePolicySetResource,
+		NewExternalBGPPeerResource,
 	}
 }
 
