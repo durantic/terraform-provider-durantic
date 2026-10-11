@@ -61,13 +61,14 @@ The provider uses an OpenAPI-generated Go client:
 
 - **Module:** `github.com/durantic/controlplane-client-go/durantic`
 - **Authentication:** Bearer token via `Authorization` header
+- **Access:** the module lives in a private repository, so building from source requires read access to it (see [README_dev.md](README_dev.md#prerequisites)). Use the published Registry binaries otherwise.
 
 ## Resources
 
 | Resource               | Description |
 |------------------------|-------------|
-| `durantic_machine_config` | Manages desired configuration for an existing Durantic machine — mesh network assignment, role names, tunnel settings, and provisioning-related config flags. |
-| `durantic_machine_deployment` | Manages configuration and OS provisioning for an existing Durantic machine — applies role, mesh, and tunnel settings and triggers a full OS install, blocking until the provision run reaches a terminal state. |
+| `durantic_machine_config` | Manages desired configuration for an existing Durantic machine — mesh network assignment, role names, tunnel settings, and provisioning-related config flags. Destroying it does not delete the machine. |
+| `durantic_machine_deployment` | Manages configuration and OS provisioning for an existing Durantic machine — applies role, mesh, and tunnel settings and triggers a full OS install, blocking until the provision run reaches a terminal state. Only `completed` succeeds; `degraded` (OS installed but cloud-init did not apply the configuration as specified) fails the apply. Destroying it only removes it from state. |
 | `durantic_machine_role` | Manages a Durantic machine role — a named configuration template (cloud-init data, merge priority, mesh requirement, optional VIP association) applied to machines. |
 | `durantic_mesh_network` | Manages a Durantic mesh network — a WireGuard-based overlay network with a defined CIDR block, default flag, and route reflector mode. |
 | `durantic_route`        | Manages a Durantic route — a named set of network prefixes with optional machine associations and enable/disable control. |
@@ -82,7 +83,7 @@ The provider uses an OpenAPI-generated Go client:
 
 | Data Source       | Description |
 |-------------------|-------------|
-| `durantic_machine` | Looks up an existing machine by UUID or hostname, including role, mesh, public IP, and status fields. |
+| `durantic_machine` | Looks up an existing machine by UUID or hostname, including role, mesh (`mesh_ip_address`), public IP, and status fields. `wg_ip_address` is a deprecated alias of `mesh_ip_address`, also exposed on `durantic_machine_config` and `durantic_machine_deployment`. |
 | `durantic_image` | Looks up a single image by UUID, name, or Docker image URL. |
 | `durantic_images` | Lists all images available to the account (own and official). |
 
@@ -230,8 +231,9 @@ terraform plan
 2. Define a resource struct with a `*durantic.APIClient` field and a Terraform model struct.
 3. Implement `Metadata`, `Schema`, `Configure`, `Create`, `Read`, `Update`, `Delete`, and `ImportState`.
 4. Register the resource in `provider.go` `Resources()`.
-5. Add acceptance tests in `internal/provider/<resource_name>_resource_test.go`.
-6. Run `TF_ACC=1 go test -v ./internal/provider/` to verify.
+5. Add acceptance tests in `internal/provider/<resource_name>_resource_test.go`. Name test resources with the `test-` prefix so the pre-run sweep in `sweep_test.go` can clean up leftovers, and add a sweep entry for the new type if tests create it.
+6. Add `examples/resources/<resource_name>/resource.tf` and `import.sh`, then run `make generate` and commit the regenerated `docs/` (CI fails if `docs/` is stale).
+7. Run `make test`, and `TF_ACC=1 go test -v ./internal/provider/` against a non-production account, to verify.
 
 See `internal/provider/machine_role_resource.go` for a complete reference implementation.
 
