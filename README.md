@@ -78,6 +78,8 @@ The provider uses an OpenAPI-generated Go client:
 | `durantic_secret`       | Manages a Durantic account secret — a named sensitive value stored encrypted. The value is write-only (never returned by the API). |
 | `durantic_variable`     | Manages a Durantic account variable — a named key/value pair available to workloads. |
 | `durantic_route_policy_set` | Manages a Durantic route policy set — an ordered list of BGP route policy rules with nested `rules` blocks. |
+| `durantic_external_bgp_peer` | Manages a Durantic external BGP peer — a BGP session from a machine to a neighbor outside the mesh, with optional import and export route policy sets. The MD5 `password` is write-only. |
+| `durantic_image` | Manages a Durantic image — a container image that machine roles install onto machines, optionally pulled with a registry credential. |
 
 ## Data Sources
 
@@ -86,6 +88,9 @@ The provider uses an OpenAPI-generated Go client:
 | `durantic_machine` | Looks up an existing machine by UUID or hostname, including role, mesh (`mesh_ip_address`), public IP, and status fields. `wg_ip_address` is a deprecated alias of `mesh_ip_address`, also exposed on `durantic_machine_config` and `durantic_machine_deployment`. |
 | `durantic_image` | Looks up a single image by UUID, name, or Docker image URL. |
 | `durantic_images` | Lists all images available to the account (own and official). |
+| `durantic_vip` | Looks up a VIP by UUID or name, including health check settings and assigned machines. |
+| `durantic_route_policy_set` | Looks up a route policy set by UUID or name, including its rules. |
+| `durantic_mesh_network` | Looks up a mesh network by UUID or name, including its CIDR block and machine count. |
 
 ## Examples
 
@@ -97,6 +102,9 @@ The [`examples/`](examples/) directory contains ready-to-use configurations:
 | [`examples/data-sources/durantic_machine/data-source.tf`](examples/data-sources/durantic_machine/data-source.tf) | Looking up a machine and its public/mesh IPs |
 | [`examples/data-sources/durantic_image/data-source.tf`](examples/data-sources/durantic_image/data-source.tf) | Looking up a single image by Docker image URL or name |
 | [`examples/data-sources/durantic_images/data-source.tf`](examples/data-sources/durantic_images/data-source.tf) | Listing images and looking up by name |
+| [`examples/data-sources/durantic_vip/data-source.tf`](examples/data-sources/durantic_vip/data-source.tf) | Looking up a VIP by name or UUID and attaching it to a machine role |
+| [`examples/data-sources/durantic_route_policy_set/data-source.tf`](examples/data-sources/durantic_route_policy_set/data-source.tf) | Looking up a route policy set and using it as a BGP peer's import policy |
+| [`examples/data-sources/durantic_mesh_network/data-source.tf`](examples/data-sources/durantic_mesh_network/data-source.tf) | Looking up a mesh network and assigning a machine to it |
 | [`examples/resources/durantic_machine_config/resource.tf`](examples/resources/durantic_machine_config/resource.tf) | Assigning Terraform-created roles and a mesh network to an existing machine |
 | [`examples/resources/durantic_machine_config/import.sh`](examples/resources/durantic_machine_config/import.sh) | Importing existing machine config by machine UUID |
 | [`examples/resources/durantic_machine_deployment/resource.tf`](examples/resources/durantic_machine_deployment/resource.tf) | Provisioning an existing machine — assigning roles and a mesh network and triggering an OS install |
@@ -119,6 +127,10 @@ The [`examples/`](examples/) directory contains ready-to-use configurations:
 | [`examples/resources/durantic_variable/import.sh`](examples/resources/durantic_variable/import.sh) | Importing an existing variable by UUID |
 | [`examples/resources/durantic_route_policy_set/resource.tf`](examples/resources/durantic_route_policy_set/resource.tf) | Policy set with and without nested rules |
 | [`examples/resources/durantic_route_policy_set/import.sh`](examples/resources/durantic_route_policy_set/import.sh) | Importing an existing route policy set by UUID |
+| [`examples/resources/durantic_external_bgp_peer/resource.tf`](examples/resources/durantic_external_bgp_peer/resource.tf) | Minimal and full external BGP peer examples with import/export policies |
+| [`examples/resources/durantic_external_bgp_peer/import.sh`](examples/resources/durantic_external_bgp_peer/import.sh) | Importing an existing external BGP peer by UUID (the password must be set in configuration) |
+| [`examples/resources/durantic_image/resource.tf`](examples/resources/durantic_image/resource.tf) | Public image and private image with a registry credential |
+| [`examples/resources/durantic_image/import.sh`](examples/resources/durantic_image/import.sh) | Importing an existing image by UUID |
 
 > These example files are also used to generate the documentation under `docs/`.
 
