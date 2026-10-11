@@ -146,6 +146,18 @@ func testAccSweepLeftovers() {
 		},
 	)
 
+	// Machine roles (swept above) reference images, and images reference registry
+	// credentials (swept below). Official images never carry the test prefix, so
+	// the name filter leaves them alone.
+	testAccSweep[durantic.ImageSchema]("image",
+		func() ([]durantic.ImageSchema, *http.Response, error) {
+			return client.ImagesAPI.ProvisioningApiListImages(ctx).Execute()
+		},
+		func(uuid string) (*http.Response, error) {
+			return client.ImagesAPI.ProvisioningApiDeleteImage(ctx, uuid).Execute()
+		},
+	)
+
 	testAccSweep[durantic.RegistryCredentialSchema]("registry_credential",
 		func() ([]durantic.RegistryCredentialSchema, *http.Response, error) {
 			return client.RegistryCredentialsAPI.ProvisioningApiListRegistryCredentials(ctx).Execute()
