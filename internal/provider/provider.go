@@ -187,6 +187,9 @@ func (p *DuranticProvider) DataSources(ctx context.Context) []func() datasource.
 		NewImagesDataSource,
 		NewImageDataSource,
 		NewMachineDataSource,
+		NewVIPDataSource,
+		NewRoutePolicySetDataSource,
+		NewMeshNetworkDataSource,
 	}
 }
 
