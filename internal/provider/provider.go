@@ -173,6 +173,8 @@ func (p *DuranticProvider) Resources(ctx context.Context) []func() resource.Reso
 		NewSecretResource,
 		NewVariableResource,
 		NewRoutePolicySetResource,
+		NewExternalBGPPeerResource,
+		NewImageResource,
 	}
 }
 
@@ -185,6 +187,9 @@ func (p *DuranticProvider) DataSources(ctx context.Context) []func() datasource.
 		NewImagesDataSource,
 		NewImageDataSource,
 		NewMachineDataSource,
+		NewVIPDataSource,
+		NewRoutePolicySetDataSource,
+		NewMeshNetworkDataSource,
 	}
 }
 

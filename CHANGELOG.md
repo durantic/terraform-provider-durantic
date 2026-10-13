@@ -1,3 +1,13 @@
+## 1.3.0 (October 13, 2026)
+
+FEATURES:
+
+* **New Resource:** `durantic_external_bgp_peer`
+* **New Resource:** `durantic_image`
+* **New Data Source:** `durantic_mesh_network`
+* **New Data Source:** `durantic_route_policy_set`
+* **New Data Source:** `durantic_vip`
+
 ## 1.2.0 (September 28, 2026)
 
 FEATURES:
