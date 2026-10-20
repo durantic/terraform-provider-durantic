@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
@@ -54,18 +55,18 @@ func TestBuildCreateImageRequest(t *testing.T) {
 }
 
 // Removing registry_credential_uuid from configuration has to detach the
-// credential, which needs an explicit JSON null — omitting the field would
-// leave it attached.
+// credential. The API detaches on an empty string (older control planes ignore
+// null); omitting the field would leave it attached.
 func TestBuildUpdateImageRequest(t *testing.T) {
-	t.Run("detaches the credential with an explicit null", func(t *testing.T) {
+	t.Run("detaches the credential with an empty string", func(t *testing.T) {
 		m := marshalToMap(t, buildUpdateImageRequest(testImageModel()))
 
 		v, present := m["registry_credential_uuid"]
 		if !present {
-			t.Fatal("registry_credential_uuid is omitted, want an explicit null")
+			t.Fatal("registry_credential_uuid is omitted, want an empty string")
 		}
-		if v != nil {
-			t.Errorf("registry_credential_uuid = %v, want null", v)
+		if v != "" {
+			t.Errorf("registry_credential_uuid = %v, want an empty string", v)
 		}
 	})
 
@@ -210,9 +211,17 @@ func TestAccImageResource(t *testing.T) {
 			},
 			// Import
 			{
-				ResourceName:      addr,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:                         addr,
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "uuid",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[addr]
+					if !ok {
+						return "", fmt.Errorf("resource %s not found in state", addr)
+					}
+					return rs.Primary.Attributes["uuid"], nil
+				},
 			},
 			// Update name, URL and description, and attach a registry credential
 			{

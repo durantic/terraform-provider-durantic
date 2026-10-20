@@ -293,8 +293,10 @@ func buildCreateImageRequest(data *ImageResourceModel) *durantic.CreateImageSche
 }
 
 // buildUpdateImageRequest builds a full-state update. An unset
-// registry_credential_uuid is sent as an explicit JSON null: omitting it would
-// leave the previous credential attached when it is removed from configuration.
+// registry_credential_uuid is sent as an empty string, which detaches the
+// credential on every control plane version. An omitted field leaves it
+// unchanged, and a JSON null only detaches on control planes that include the
+// null-detach fix.
 func buildUpdateImageRequest(data *ImageResourceModel) *durantic.UpdateImageSchema {
 	updateReq := durantic.NewUpdateImageSchema()
 	updateReq.SetName(data.Name.ValueString())
@@ -302,7 +304,7 @@ func buildUpdateImageRequest(data *ImageResourceModel) *durantic.UpdateImageSche
 	updateReq.SetDescription(data.Description.ValueString())
 
 	if data.RegistryCredentialUUID.IsNull() {
-		updateReq.SetRegistryCredentialUuidNil()
+		updateReq.SetRegistryCredentialUuid("")
 	} else {
 		updateReq.SetRegistryCredentialUuid(data.RegistryCredentialUUID.ValueString())
 	}

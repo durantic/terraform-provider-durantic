@@ -337,10 +337,15 @@ func buildCreateExternalBGPPeerRequest(data *ExternalBGPPeerResourceModel) *dura
 }
 
 // buildUpdateExternalBGPPeerRequest builds a full-state update. The optional
-// fields are sent as an explicit JSON null when unset in the plan: omitting
-// them would leave a previously configured value in place on the server, so
-// removing `local_ip`, `password` or a policy from the configuration would
-// silently do nothing.
+// fields are cleared when unset in the plan: omitting them would leave a
+// previously configured value in place on the server, so removing `local_ip`
+// or `password` from the configuration would silently do nothing. For these
+// two fields the API treats a JSON null as "unchanged" and clears them on an
+// empty string, so that is what is sent.
+//
+// The policy UUIDs are sent as an explicit null, which detaches the policy.
+// Control planes that predate that fix ignore null here, and "" is rejected as
+// an invalid UUID.
 func buildUpdateExternalBGPPeerRequest(data *ExternalBGPPeerResourceModel) *durantic.UpdateExternalBGPPeerSchema {
 	updateReq := durantic.NewUpdateExternalBGPPeerSchema()
 	updateReq.SetName(data.Name.ValueString())
@@ -349,12 +354,12 @@ func buildUpdateExternalBGPPeerRequest(data *ExternalBGPPeerResourceModel) *dura
 	updateReq.SetEnabled(data.Enabled.ValueBool())
 
 	if data.LocalIP.IsNull() {
-		updateReq.SetLocalIpNil()
+		updateReq.SetLocalIp("")
 	} else {
 		updateReq.SetLocalIp(data.LocalIP.ValueString())
 	}
 	if data.Password.IsNull() {
-		updateReq.SetPasswordNil()
+		updateReq.SetPassword("")
 	} else {
 		updateReq.SetPassword(data.Password.ValueString())
 	}

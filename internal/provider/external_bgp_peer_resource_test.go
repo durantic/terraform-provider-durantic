@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
@@ -98,13 +99,26 @@ func TestBuildCreateExternalBGPPeerRequest(t *testing.T) {
 	})
 }
 
-// Removing an optional field from the configuration has to clear it on the
-// server, which needs an explicit JSON null — an omitted field means "leave
+// Removing local_ip or password from the configuration has to clear it on the
+// server, which takes an empty string — an omitted field or a null means "leave
 // unchanged".
-func TestBuildUpdateExternalBGPPeerRequest_ClearsUnsetFieldsWithNull(t *testing.T) {
+func TestBuildUpdateExternalBGPPeerRequest_ClearsUnsetFieldsWithEmptyString(t *testing.T) {
 	m := marshalToMap(t, buildUpdateExternalBGPPeerRequest(testExternalBGPPeerModel()))
 
-	for _, k := range []string{"local_ip", "password", "import_policy_uuid", "export_policy_uuid"} {
+	for _, k := range []string{"local_ip", "password"} {
+		v, present := m[k]
+		if !present {
+			t.Errorf("%s is omitted, want an empty string so the server clears it", k)
+			continue
+		}
+		if v != "" {
+			t.Errorf("%s = %v, want an empty string", k, v)
+		}
+	}
+
+	// Policies are detached with an explicit null (the API rejects "" as an
+	// invalid UUID).
+	for _, k := range []string{"import_policy_uuid", "export_policy_uuid"} {
 		v, present := m[k]
 		if !present {
 			t.Errorf("%s is omitted, want an explicit null so the server clears it", k)
@@ -283,10 +297,18 @@ func TestAccExternalBGPPeerResource(t *testing.T) {
 			},
 			// Import — the password is never returned by the API
 			{
-				ResourceName:            addr,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"password"},
+				ResourceName:                         addr,
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateVerifyIgnore:              []string{"password"},
+				ImportStateVerifyIdentifierAttribute: "uuid",
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[addr]
+					if !ok {
+						return "", fmt.Errorf("resource %s not found in state", addr)
+					}
+					return rs.Primary.Attributes["uuid"], nil
+				},
 			},
 			// Update ASN, disable the session and detach the policy
 			{
